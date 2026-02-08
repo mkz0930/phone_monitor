@@ -176,8 +176,27 @@
                             android:id="@+id/et_webhook_url"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="粘贴 Webhook 地址"
+                            android:hint="主 Webhook 地址"
                             android:inputType="textUri"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_extra_webhooks"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="额外 Webhook（可选，同步发送）"
+                            android:inputType="textUri|textMultiLine"
                             android:textSize="12sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 

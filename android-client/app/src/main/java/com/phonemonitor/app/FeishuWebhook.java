@@ -22,17 +22,34 @@ public class FeishuWebhook {
     private static final int READ_TIMEOUT = 10000;
 
     /**
-     * 发送文本消息到飞书 Webhook（带重试）
-     * @return true if sent successfully
+     * 发送文本消息到飞书 Webhook（主 + 额外 webhook 都发）
+     * @return true if at least one sent successfully
      */
     public static boolean sendText(Context context, String text) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String webhookUrl = prefs.getString("webhook_url", "");
-        if (webhookUrl.isEmpty()) {
-            Log.w(TAG, "Webhook 未配置");
-            return false;
+        String extraWebhooks = prefs.getString("extra_webhooks", "");
+
+        boolean anyOk = false;
+
+        // 主 webhook
+        if (!webhookUrl.isEmpty()) {
+            if (sendText(webhookUrl, text)) anyOk = true;
         }
-        return sendText(webhookUrl, text);
+
+        // 额外 webhook（逗号或换行分隔）
+        if (!extraWebhooks.isEmpty()) {
+            String[] urls = extraWebhooks.split("[,\\n]+");
+            for (String url : urls) {
+                url = url.trim();
+                if (!url.isEmpty() && url.startsWith("http")) {
+                    if (sendText(url, text)) anyOk = true;
+                }
+            }
+        }
+
+        if (!anyOk) Log.w(TAG, "Webhook 未配置或全部失败");
+        return anyOk;
     }
 
     /**

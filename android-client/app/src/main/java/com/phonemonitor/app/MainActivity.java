@@ -38,7 +38,7 @@ import java.util.TimeZone;
 public class MainActivity extends AppCompatActivity implements LogBus.LogListener {
     static final String PREFS_NAME = "phone_monitor_prefs";
 
-    private EditText etWebhookUrl;
+    private EditText etWebhookUrl, etExtraWebhooks;
     private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnNotification;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         setContentView(R.layout.activity_main);
 
         etWebhookUrl = findViewById(R.id.et_webhook_url);
+        etExtraWebhooks = findViewById(R.id.et_extra_webhooks);
         btnSave = findViewById(R.id.btn_save);
         btnTest = findViewById(R.id.btn_test);
         btnGrant = findViewById(R.id.btn_grant_permission);
@@ -292,11 +293,13 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
     private void loadPrefs() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         etWebhookUrl.setText(prefs.getString("webhook_url", ""));
+        etExtraWebhooks.setText(prefs.getString("extra_webhooks", ""));
     }
 
     private void savePrefs() {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .putString("webhook_url", etWebhookUrl.getText().toString().trim())
+                .putString("extra_webhooks", etExtraWebhooks.getText().toString().trim())
                 .apply();
     }
 
