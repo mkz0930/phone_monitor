@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.AppOpsManager;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -17,6 +18,7 @@ import android.view.View;
 import android.view.accessibility.AccessibilityManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -37,9 +39,11 @@ public class MainActivity extends AppCompatActivity {
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl;
-    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard;
-    private TextView tvStatus, tvLog;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnNotification;
+    private TextView tvStatus, tvLog, tvWebhookHeader;
+    private LinearLayout layoutWebhook;
     private ScrollView scrollLog;
+    private boolean webhookExpanded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,8 +56,11 @@ public class MainActivity extends AppCompatActivity {
         btnGrant = findViewById(R.id.btn_grant_permission);
         btnSendNow = findViewById(R.id.btn_send_now);
         btnClipboard = findViewById(R.id.btn_clipboard);
+        btnNotification = findViewById(R.id.btn_notification);
         tvStatus = findViewById(R.id.tv_status);
         tvLog = findViewById(R.id.tv_log);
+        tvWebhookHeader = findViewById(R.id.tv_webhook_header);
+        layoutWebhook = findViewById(R.id.layout_webhook);
         scrollLog = findViewById(R.id.scroll_log);
 
         loadPrefs();
@@ -65,10 +72,20 @@ public class MainActivity extends AppCompatActivity {
             etWebhookUrl.setText(defaultUrl);
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
             DailyAlarmReceiver.scheduleDailyAlarm(this);
-            appendLog("✅ 已自动配置，每天 19:00 发送日报");
+            appendLog("✅ 已自动配置");
         }
 
+        // 初始化消息队列
+        MessageQueue.getInstance(this);
+
         updateStatus();
+
+        // Webhook 折叠/展开
+        tvWebhookHeader.setOnClickListener(v -> {
+            webhookExpanded = !webhookExpanded;
+            layoutWebhook.setVisibility(webhookExpanded ? View.VISIBLE : View.GONE);
+            tvWebhookHeader.setText(webhookExpanded ? "⚙️ Webhook 配置 ▾" : "⚙️ Webhook 配置 ▸");
+        });
 
         btnGrant.setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
@@ -83,10 +100,10 @@ public class MainActivity extends AppCompatActivity {
 
         btnTest.setOnClickListener(v -> {
             if (!hasUsagePermission()) {
-                Toast.makeText(this, "⚠️ 请先授权使用情况访问", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "⚠️ 请先授权", Toast.LENGTH_SHORT).show();
                 return;
             }
-            appendLog("📊 正在采集...");
+            appendLog("📊 采集中...");
             new Thread(() -> {
                 String result = collectAndFormat();
                 runOnUiThread(() -> appendLog(result));
@@ -95,12 +112,12 @@ public class MainActivity extends AppCompatActivity {
 
         btnSendNow.setOnClickListener(v -> {
             if (!hasUsagePermission()) {
-                Toast.makeText(this, "⚠️ 请先授权使用情况访问", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "⚠️ 请先授权", Toast.LENGTH_SHORT).show();
                 return;
             }
             savePrefs();
             btnSendNow.setEnabled(false);
-            appendLog("📤 正在发送...");
+            appendLog("📤 发送中...");
             new Thread(() -> {
                 try {
                     FeishuSender sender = new FeishuSender(this);
@@ -108,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         appendLog("✅ " + result);
                         btnSendNow.setEnabled(true);
+                        updateStatus();
                     });
                 } catch (Exception e) {
                     runOnUiThread(() -> {
@@ -120,11 +138,26 @@ public class MainActivity extends AppCompatActivity {
 
         btnClipboard.setOnClickListener(v -> {
             if (isAccessibilityEnabled()) {
-                appendLog("ℹ️ 跳转到无障碍设置管理");
+                appendLog("ℹ️ 跳转到无障碍设置");
             } else {
                 appendLog("ℹ️ 请找到「Phone Monitor」并开启");
             }
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        });
+
+        btnNotification.setOnClickListener(v -> {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            if (isNotificationListenerEnabled()) {
+                // 已有权限，切换开关
+                boolean current = prefs.getBoolean("notification_enabled", false);
+                prefs.edit().putBoolean("notification_enabled", !current).apply();
+                appendLog(!current ? "🔔 通知同步已开启" : "🔕 通知同步已关闭");
+            } else {
+                // 需要授权
+                appendLog("ℹ️ 请找到「Phone Monitor」并允许通知使用权");
+                startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+            }
+            updateStatus();
         });
     }
 
@@ -146,6 +179,13 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+    private boolean isNotificationListenerEnabled() {
+        ComponentName cn = new ComponentName(this, NotificationMonitorService.class);
+        String flat = Settings.Secure.getString(getContentResolver(),
+                "enabled_notification_listeners");
+        return flat != null && flat.contains(cn.flattenToString());
+    }
+
     private boolean hasUsagePermission() {
         AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
         int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
@@ -156,29 +196,40 @@ public class MainActivity extends AppCompatActivity {
     private void updateStatus() {
         boolean hasPerm = hasUsagePermission();
         boolean clipEnabled = isAccessibilityEnabled();
+        boolean notifPermission = isNotificationListenerEnabled();
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String url = prefs.getString("webhook_url", "");
+        boolean notifEnabled = prefs.getBoolean("notification_enabled", false) && notifPermission;
 
         StringBuilder sb = new StringBuilder();
-        // 权限状态行
-        sb.append(hasPerm ? "✅ 使用统计" : "❌ 使用统计");
-        sb.append("  ");
-        sb.append(url.isEmpty() ? "❌ Webhook" : "✅ Webhook");
-        sb.append("\n");
 
-        // 剪贴板状态
+        // 权限行
+        sb.append(hasPerm ? "✅" : "❌").append(" 使用统计  ");
+        sb.append(url.isEmpty() ? "❌" : "✅").append(" Webhook\n");
+
+        // 剪贴板
         if (clipEnabled) {
             int clipCount = FeishuWebhook.getSendCount(this, "clipboard_send_count");
+            sb.append("✅ 剪贴板");
+            if (clipCount > 0) sb.append(" · ").append(clipCount).append("条");
             String lastClip = prefs.getString("clipboard_last_content", "");
-            sb.append("✅ 剪贴板监听中");
-            if (clipCount > 0) {
-                sb.append(" · 已同步 ").append(clipCount).append(" 条");
-            }
             if (!lastClip.isEmpty()) {
                 sb.append("\n   📝 ").append(lastClip);
             }
         } else {
             sb.append("❌ 剪贴板未开启");
+        }
+        sb.append("\n");
+
+        // 通知
+        if (notifEnabled) {
+            int notifCount = FeishuWebhook.getSendCount(this, "notification_send_count");
+            sb.append("✅ 通知同步");
+            if (notifCount > 0) sb.append(" · ").append(notifCount).append("条");
+        } else if (notifPermission) {
+            sb.append("⏸ 通知同步已暂停");
+        } else {
+            sb.append("❌ 通知同步未授权");
         }
         sb.append("\n");
 
@@ -191,25 +242,36 @@ public class MainActivity extends AppCompatActivity {
             cal.add(Calendar.DAY_OF_YEAR, 1);
         }
         String nextTime = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(cal.getTime());
-        sb.append("⏰ 下次日报: ").append(nextTime);
-
-        // 日报发送次数
+        sb.append("⏰ 日报: ").append(nextTime);
         int reportCount = FeishuWebhook.getSendCount(this, "report_send_count");
-        if (reportCount > 0) {
-            sb.append(" · 累计 ").append(reportCount).append(" 次");
-        }
+        if (reportCount > 0) sb.append(" · 累计").append(reportCount).append("次");
 
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
 
         // 剪贴板按钮
         if (clipEnabled) {
-            btnClipboard.setText("✅ 剪贴板监听中（点击管理）");
+            btnClipboard.setText("✅ 剪贴板监听中");
             btnClipboard.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(0xFF4CAF50));
         } else {
             btnClipboard.setText("📋 开启剪贴板监听");
             btnClipboard.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFFFF9800));
+        }
+
+        // 通知按钮
+        if (notifEnabled) {
+            btnNotification.setText("✅ 通知同步中（点击暂停）");
+            btnNotification.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFF4CAF50));
+        } else if (notifPermission) {
+            btnNotification.setText("⏸ 通知同步已暂停（点击开启）");
+            btnNotification.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFF9E9E9E));
+        } else {
+            btnNotification.setText("🔔 开启通知同步");
+            btnNotification.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(0xFFFF9800));
         }
     }

@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 无障碍服务：剪贴板监听（系统级权限，后台可读剪贴板） -->
+        <!-- 无障碍服务：剪贴板监听 -->
         <service
             android:name=".ClipboardAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -43,6 +43,16 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_config" />
+        </service>
+
+        <!-- 通知监听服务 -->
+        <service
+            android:name=".NotificationMonitorService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
         </service>
 
         <receiver

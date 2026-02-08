@@ -177,11 +177,10 @@ public class ClipboardAccessibilityService extends AccessibilityService {
                 }
             }
 
-            boolean ok = FeishuWebhook.sendText(this, sb.toString());
-            if (ok) {
-                FeishuWebhook.incrementSendCount(this, COUNT_KEY);
-                Log.i(TAG, "✅ 已发送 " + items.size() + " 条");
-            }
+            // 通过消息队列发送（支持离线缓存）
+            MessageQueue.getInstance(this).send(sb.toString());
+            FeishuWebhook.incrementSendCount(this, COUNT_KEY);
+            Log.i(TAG, "📤 已提交 " + items.size() + " 条");
         }).start();
     }
 

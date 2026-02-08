@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
@@ -10,6 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- 标题 -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -18,25 +20,24 @@
             android:textStyle="bold"
             android:textColor="#1A1A1A"
             android:gravity="center"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="2dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="使用统计 → 飞书群"
-            android:textSize="14sp"
+            android:text="使用统计 · 剪贴板 · 通知 → 飞书"
+            android:textSize="13sp"
             android:textColor="#888888"
             android:gravity="center"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="20dp" />
 
-        <!-- 状态 -->
+        <!-- 状态卡片 -->
         <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -49,7 +50,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="检查中..."
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:lineSpacingExtra="4dp" />
 
                 <Button
@@ -62,74 +63,54 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Webhook 配置 -->
+        <!-- 功能开关区 -->
         <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="12dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="飞书 Webhook"
-                    android:textSize="16sp"
+                    android:text="功能开关"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="#333333"
                     android:layout_marginBottom="8dp" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    xmlns:app="http://schemas.android.com/apk/res-auto"
+                <Button
+                    android:id="@+id/btn_clipboard"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadiusTopStart="8dp"
-                    app:boxCornerRadiusTopEnd="8dp"
-                    app:boxCornerRadiusBottomStart="8dp"
-                    app:boxCornerRadiusBottomEnd="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/et_webhook_url"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="粘贴 Webhook 地址"
-                        android:inputType="textUri"
-                        android:textSize="13sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_height="44dp"
+                    android:text="📋 开启剪贴板监听"
+                    android:backgroundTint="#FF9800"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
 
                 <Button
-                    android:id="@+id/btn_save"
+                    android:id="@+id/btn_notification"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="💾 保存"
-                    android:backgroundTint="#4CAF50" />
+                    android:layout_height="44dp"
+                    android:text="🔔 开启通知同步"
+                    android:backgroundTint="#FF9800"
+                    android:textSize="13sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
-
-        <!-- 剪贴板监听 -->
-        <Button
-            android:id="@+id/btn_clipboard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📋 开启剪贴板监听"
-            android:backgroundTint="#FF9800"
-            android:layout_marginBottom="12dp" />
 
         <!-- 操作按钮 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="12dp">
 
             <Button
                 android:id="@+id/btn_test"
@@ -149,9 +130,70 @@
                 android:backgroundTint="#2196F3" />
         </LinearLayout>
 
+        <!-- Webhook 配置（可折叠） -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/tv_webhook_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚙️ Webhook 配置 ▸"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#666666"
+                    android:padding="4dp" />
+
+                <LinearLayout
+                    android:id="@+id/layout_webhook"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_webhook_url"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="粘贴 Webhook 地址"
+                            android:inputType="textUri"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <Button
+                        android:id="@+id/btn_save"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:text="💾 保存"
+                        android:backgroundTint="#4CAF50"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- 日志 -->
         <androidx.cardview.widget.CardView
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
@@ -161,27 +203,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="12dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="日志"
-                    android:textSize="16sp"
+                    android:text="📝 日志"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     android:textColor="#333333"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_marginBottom="6dp" />
 
                 <ScrollView
                     android:id="@+id/scroll_log"
                     android:layout_width="match_parent"
-                    android:layout_height="200dp">
+                    android:layout_height="180dp">
 
                     <TextView
                         android:id="@+id/tv_log"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="12sp"
+                        android:textSize="11sp"
                         android:fontFamily="monospace"
                         android:textColor="#555555"
                         android:text="就绪\n" />
