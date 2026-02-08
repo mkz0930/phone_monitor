@@ -195,8 +195,47 @@
                             android:id="@+id/et_extra_webhooks"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="额外 Webhook（可选，同步发送）"
+                            android:hint="额外目标（Webhook URL 或 oc_ 群聊ID）"
                             android:inputType="textUri|textMultiLine"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_app_id"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="飞书 App ID（oc_ 群聊需要）"
+                            android:inputType="text"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:endIconMode="password_toggle">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_app_secret"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="飞书 App Secret（oc_ 群聊需要）"
+                            android:inputType="textPassword"
                             android:textSize="12sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 

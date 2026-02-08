@@ -22,13 +22,16 @@ public class FeishuWebhook {
     private static final int READ_TIMEOUT = 10000;
 
     /**
-     * 发送文本消息到飞书 Webhook（主 + 额外 webhook 都发）
+     * 发送文本消息到飞书 Webhook（主 + 额外目标都发）
+     * 额外目标支持：webhook URL 或 oc_ 群聊 ID（通过 Bot API）
      * @return true if at least one sent successfully
      */
     public static boolean sendText(Context context, String text) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String webhookUrl = prefs.getString("webhook_url", "");
         String extraWebhooks = prefs.getString("extra_webhooks", "");
+        String appId = prefs.getString("feishu_app_id", "");
+        String appSecret = prefs.getString("feishu_app_secret", "");
 
         boolean anyOk = false;
 
@@ -37,18 +40,29 @@ public class FeishuWebhook {
             if (sendText(webhookUrl, text)) anyOk = true;
         }
 
-        // 额外 webhook（逗号或换行分隔）
+        // 额外目标（逗号或换行分隔）
         if (!extraWebhooks.isEmpty()) {
-            String[] urls = extraWebhooks.split("[,\\n]+");
-            for (String url : urls) {
-                url = url.trim();
-                if (!url.isEmpty() && url.startsWith("http")) {
-                    if (sendText(url, text)) anyOk = true;
+            String[] targets = extraWebhooks.split("[,\\n]+");
+            for (String target : targets) {
+                target = target.trim();
+                if (target.isEmpty()) continue;
+
+                if (target.startsWith("oc_")) {
+                    // Bot API 发送到群聊
+                    if (!appId.isEmpty() && !appSecret.isEmpty()) {
+                        FeishuBotApi api = new FeishuBotApi(appId, appSecret);
+                        if (api.sendText(target, text)) anyOk = true;
+                    } else {
+                        Log.w(TAG, "Bot API 需要 App ID 和 App Secret，跳过: " + target);
+                    }
+                } else if (target.startsWith("http")) {
+                    // Webhook 发送
+                    if (sendText(target, text)) anyOk = true;
                 }
             }
         }
 
-        if (!anyOk) Log.w(TAG, "Webhook 未配置或全部失败");
+        if (!anyOk) Log.w(TAG, "所有目标未配置或全部失败");
         return anyOk;
     }
 
