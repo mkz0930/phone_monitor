@@ -60,6 +60,15 @@ public class MainActivity extends AppCompatActivity {
         scrollLog = findViewById(R.id.scroll_log);
 
         loadPrefs();
+
+        // 预填 Webhook（如果为空）
+        SharedPreferences initPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (initPrefs.getString("webhook_url", "").isEmpty()) {
+            String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/24f69dd6-c2aa-4dee-9b5e-f959696878b8";
+            etWebhookUrl.setText(defaultUrl);
+            initPrefs.edit().putString("webhook_url", defaultUrl).apply();
+        }
+
         updateStatus();
 
         btnGrant.setOnClickListener(v -> {
