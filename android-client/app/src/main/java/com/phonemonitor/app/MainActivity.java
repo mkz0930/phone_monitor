@@ -8,12 +8,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -40,10 +38,9 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "PhoneMonitor";
     private static final String PREFS_NAME = "phone_monitor_prefs";
 
-    private EditText etServerUrl, etToken;
+    private EditText etWebhookUrl;
     private Button btnSave, btnTest, btnGrant, btnSendNow;
     private TextView tvStatus, tvLog;
     private ScrollView scrollLog;
@@ -53,8 +50,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        etServerUrl = findViewById(R.id.et_server_url);
-        etToken = findViewById(R.id.et_token);
+        etWebhookUrl = findViewById(R.id.et_webhook_url);
         btnSave = findViewById(R.id.btn_save);
         btnTest = findViewById(R.id.btn_test);
         btnGrant = findViewById(R.id.btn_grant_permission);
@@ -67,23 +63,22 @@ public class MainActivity extends AppCompatActivity {
         updateStatus();
 
         btnGrant.setOnClickListener(v -> {
-            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
-            startActivity(intent);
+            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
         });
 
         btnSave.setOnClickListener(v -> {
             savePrefs();
             scheduleWork();
-            Toast.makeText(this, "✅ Saved & scheduled", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "✅ 已保存，定时任务已启动", Toast.LENGTH_SHORT).show();
             updateStatus();
         });
 
         btnTest.setOnClickListener(v -> {
             if (!hasUsagePermission()) {
-                Toast.makeText(this, "⚠️ Grant usage permission first", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "⚠️ 请先授权使用情况访问", Toast.LENGTH_SHORT).show();
                 return;
             }
-            appendLog("📊 Collecting today's usage...");
+            appendLog("📊 正在采集今日数据...");
             new Thread(() -> {
                 String result = collectAndFormat();
                 runOnUiThread(() -> appendLog(result));
@@ -92,15 +87,15 @@ public class MainActivity extends AppCompatActivity {
 
         btnSendNow.setOnClickListener(v -> {
             if (!hasUsagePermission()) {
-                Toast.makeText(this, "⚠️ Grant usage permission first", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "⚠️ 请先授权使用情况访问", Toast.LENGTH_SHORT).show();
                 return;
             }
             savePrefs();
-            appendLog("📤 Sending report now...");
+            appendLog("📤 正在发送到飞书...");
             new Thread(() -> {
                 try {
-                    UsageReporter reporter = new UsageReporter(this);
-                    String result = reporter.collectAndSend();
+                    FeishuSender sender = new FeishuSender(this);
+                    String result = sender.collectAndSend();
                     runOnUiThread(() -> appendLog("✅ " + result));
                 } catch (Exception e) {
                     runOnUiThread(() -> appendLog("❌ " + e.getMessage()));
@@ -125,15 +120,12 @@ public class MainActivity extends AppCompatActivity {
     private void updateStatus() {
         boolean hasPerm = hasUsagePermission();
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String url = prefs.getString("server_url", "");
-        String token = prefs.getString("token", "");
+        String url = prefs.getString("webhook_url", "");
 
         StringBuilder sb = new StringBuilder();
-        sb.append(hasPerm ? "✅ Usage permission granted" : "❌ Usage permission NOT granted");
+        sb.append(hasPerm ? "✅ 使用情况权限已授权" : "❌ 使用情况权限未授权");
         sb.append("\n");
-        sb.append(url.isEmpty() ? "❌ Server URL not set" : "✅ Server: " + url);
-        sb.append("\n");
-        sb.append(token.isEmpty() ? "❌ Token not set" : "✅ Token configured");
+        sb.append(url.isEmpty() ? "❌ 飞书 Webhook 未配置" : "✅ Webhook 已配置");
 
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
@@ -141,15 +133,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadPrefs() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        etServerUrl.setText(prefs.getString("server_url", ""));
-        etToken.setText(prefs.getString("token", ""));
+        etWebhookUrl.setText(prefs.getString("webhook_url", ""));
     }
 
     private void savePrefs() {
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-        editor.putString("server_url", etServerUrl.getText().toString().trim());
-        editor.putString("token", etToken.getText().toString().trim());
-        editor.apply();
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putString("webhook_url", etWebhookUrl.getText().toString().trim())
+                .apply();
     }
 
     private void scheduleWork() {
@@ -166,8 +156,6 @@ public class MainActivity extends AppCompatActivity {
                 "phone_monitor_upload",
                 ExistingPeriodicWorkPolicy.UPDATE,
                 workRequest);
-
-        Log.i(TAG, "Scheduled periodic upload (every 6h)");
     }
 
     private String collectAndFormat() {
@@ -185,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
 
             Map<String, UsageStats> statsMap = usm.queryAndAggregateUsageStats(startTime, endTime);
             if (statsMap == null || statsMap.isEmpty()) {
-                return "No usage data available for today.";
+                return "今日暂无使用数据";
             }
 
             List<UsageStats> statsList = new ArrayList<>(statsMap.values());
@@ -193,13 +181,13 @@ public class MainActivity extends AppCompatActivity {
                     Long.compare(b.getTotalTimeInForeground(), a.getTotalTimeInForeground()));
 
             StringBuilder sb = new StringBuilder();
-            sb.append("📱 Today's Usage:\n\n");
+            sb.append("📱 今日使用情况：\n\n");
             long totalMs = 0;
             int count = 0;
 
             for (UsageStats stats : statsList) {
                 long fg = stats.getTotalTimeInForeground();
-                if (fg < 60000) continue; // skip < 1 min
+                if (fg < 60000) continue;
 
                 totalMs += fg;
                 count++;
@@ -215,20 +203,20 @@ public class MainActivity extends AppCompatActivity {
                 if (count >= 15) break;
             }
 
-            sb.append(String.format("\nTotal: %s (%d apps)", formatMs(totalMs), count));
+            sb.append(String.format("\n合计: %s (%d 个应用)", formatMs(totalMs), count));
             return sb.toString();
 
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            return "错误: " + e.getMessage();
         }
     }
 
-    private String formatMs(long ms) {
+    static String formatMs(long ms) {
         long minutes = ms / 60000;
         long hours = minutes / 60;
         minutes = minutes % 60;
-        if (hours > 0) return String.format("%dh %dm", hours, minutes);
-        return String.format("%dm", minutes);
+        if (hours > 0) return String.format("%d小时%d分钟", hours, minutes);
+        return String.format("%d分钟", minutes);
     }
 
     private void appendLog(String text) {

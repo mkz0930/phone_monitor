@@ -17,14 +17,14 @@ public class UsageUploadWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        Log.i(TAG, "Starting usage upload...");
+        Log.i(TAG, "开始上报使用数据...");
         try {
-            UsageReporter reporter = new UsageReporter(getApplicationContext());
-            String result = reporter.collectAndSend();
-            Log.i(TAG, "Upload success: " + result);
+            FeishuSender sender = new FeishuSender(getApplicationContext());
+            String result = sender.collectAndSend();
+            Log.i(TAG, "上报成功: " + result);
             return Result.success();
         } catch (Exception e) {
-            Log.e(TAG, "Upload failed: " + e.getMessage(), e);
+            Log.e(TAG, "上报失败: " + e.getMessage(), e);
             return Result.retry();
         }
     }
