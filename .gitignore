@@ -2,3 +2,8 @@ node_modules/
 data/
 .env
 *.tmp.*
+android-client/app/build/
+android-client/.gradle/
+android-client/build/
+android-client/local.properties
+*.apk
