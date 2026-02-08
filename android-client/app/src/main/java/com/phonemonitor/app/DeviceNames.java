@@ -13,7 +13,7 @@ public class DeviceNames {
 
     static {
         // OPPO
-        MAP.put("PKH120", "Find N5");
+        MAP.put("PKH120", "OPPO Find N5");
         MAP.put("PHZ110", "Find N5 Flip");
         MAP.put("PHQ110", "Find X8 Pro");
         MAP.put("PKG110", "Find X8 Ultra");
