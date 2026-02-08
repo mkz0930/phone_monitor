@@ -21,7 +21,11 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * 无障碍服务：监听剪贴板变化，智能识别内容类型，批量发送
+ * 无障碍服务：监听剪贴板变化
+ * 
+ * 双重检测机制：
+ * 1. ClipboardManager.OnPrimaryClipChangedListener（主）
+ * 2. 每次无障碍事件时轮询剪贴板（备用，兼容 OPPO/vivo 等厂商）
  */
 public class ClipboardAccessibilityService extends AccessibilityService {
     private static final String TAG = "ClipA11y";
@@ -29,20 +33,20 @@ public class ClipboardAccessibilityService extends AccessibilityService {
     private static final String COUNT_KEY = "clipboard_send_count";
     private static final String LAST_CLIP_KEY = "clipboard_last_content";
 
-    // 批量发送：3秒内的多次复制合并为一条消息
     private static final long BATCH_WINDOW_MS = 3000;
+    private static final long POLL_INTERVAL_MS = 1500; // 轮询最小间隔
 
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private String lastClipHash = "";
     private long lastClipTime = 0;
+    private long lastPollTime = 0;
 
-    // 批量缓冲
     private final List<String> batchBuffer = new ArrayList<>();
     private final Handler batchHandler = new Handler(Looper.getMainLooper());
     private Runnable batchRunnable;
 
-    // 内容类型检测 patterns
+    // 内容类型检测
     private static final Pattern URL_PATTERN = Pattern.compile("^https?://\\S+$", Pattern.DOTALL);
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d[\\d\\s\\-()]{7,18}\\d$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
@@ -54,25 +58,45 @@ public class ClipboardAccessibilityService extends AccessibilityService {
     public void onServiceConnected() {
         super.onServiceConnected();
 
-        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes = AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED;
+        // 配置无障碍：监听所有事件类型
+        AccessibilityServiceInfo info = getServiceInfo();
+        if (info == null) info = new AccessibilityServiceInfo();
+        info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
-        info.notificationTimeout = 500;
+        info.notificationTimeout = 200;
+        info.flags = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
         setServiceInfo(info);
 
         clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        clipListener = this::onClipChanged;
+
+        // 方式1：直接监听（部分设备有效）
+        clipListener = this::processClipboard;
         clipboardManager.addPrimaryClipChangedListener(clipListener);
 
-        Log.i(TAG, "✅ 无障碍剪贴板监听已启动");
+        Log.i(TAG, "✅ 剪贴板监听已启动（双重检测）");
+        LogBus.post("✅", "剪贴板监听已启动");
     }
 
-    private void onClipChanged() {
+    /**
+     * 方式2：每次无障碍事件时检查剪贴板（兼容 OPPO/vivo/ColorOS）
+     */
+    @Override
+    public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event == null) return;
+
+        // 节流：最少间隔 1.5 秒检查一次
+        long now = System.currentTimeMillis();
+        if (now - lastPollTime < POLL_INTERVAL_MS) return;
+        lastPollTime = now;
+
+        processClipboard();
+    }
+
+    private void processClipboard() {
         try {
             long now = System.currentTimeMillis();
-            // 防抖 300ms
-            if (now - lastClipTime < 300) return;
-            lastClipTime = now;
+            // 防抖 500ms
+            if (now - lastClipTime < 500) return;
 
             ClipData clip = clipboardManager.getPrimaryClip();
             if (clip == null || clip.getItemCount() == 0) return;
@@ -86,10 +110,11 @@ public class ClipboardAccessibilityService extends AccessibilityService {
             String content = rawText.toString().trim();
             if (content.isEmpty() || content.length() < 2) return;
 
-            // MD5 去重
+            // MD5 去重（核心：同一内容不重复处理）
             String hash = md5(content);
             if (hash.equals(lastClipHash)) return;
             lastClipHash = hash;
+            lastClipTime = now;
 
             // 截断
             if (content.length() > 5000) {
@@ -98,39 +123,37 @@ public class ClipboardAccessibilityService extends AccessibilityService {
 
             // 过滤敏感内容
             if (isSensitive(content)) {
-                Log.d(TAG, "敏感内容，跳过");
+                Log.d(TAG, "🔒 敏感内容，跳过");
+                LogBus.post("📋", "🔒 检测到敏感内容，已跳过");
                 return;
             }
 
             Log.i(TAG, "📋 新内容 (" + content.length() + " chars)");
 
-            // 保存最后一条到 prefs（供 UI 显示）
+            // 保存到 prefs
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                     .putString(LAST_CLIP_KEY, content.length() > 50 ?
                             content.substring(0, 50) + "..." : content)
                     .putLong("clipboard_last_time", now)
                     .apply();
 
-            // 加入批量缓冲
             addToBatch(content);
 
+        } catch (SecurityException se) {
+            // Android 13+ 可能限制后台剪贴板访问
+            Log.w(TAG, "剪贴板访问被拒: " + se.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "处理失败: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * 批量发送：3秒窗口内的多次复制合并为一条消息
-     */
     private synchronized void addToBatch(String content) {
         batchBuffer.add(content);
 
-        // 取消之前的定时发送
         if (batchRunnable != null) {
             batchHandler.removeCallbacks(batchRunnable);
         }
 
-        // 3秒后发送
         batchRunnable = () -> {
             List<String> toSend;
             synchronized (this) {
@@ -165,7 +188,6 @@ public class ClipboardAccessibilityService extends AccessibilityService {
                     sb.append("\n");
                 }
 
-                // 智能类型标记
                 String typeTag = detectContentType(content);
                 if (!typeTag.isEmpty()) {
                     sb.append(typeTag).append(" ");
@@ -177,12 +199,11 @@ public class ClipboardAccessibilityService extends AccessibilityService {
                 }
             }
 
-            // 通过消息队列发送（支持离线缓存）
             MessageQueue.getInstance(this).send(sb.toString());
             FeishuWebhook.incrementSendCount(this, COUNT_KEY);
             Log.i(TAG, "📤 已提交 " + items.size() + " 条");
 
-            // 通知 UI 日志
+            // 通知 UI
             for (String item : items) {
                 String typeTag = detectContentType(item);
                 String preview = item.length() > 80 ? item.substring(0, 80) + "..." : item;
@@ -191,32 +212,22 @@ public class ClipboardAccessibilityService extends AccessibilityService {
         }).start();
     }
 
-    /**
-     * 智能内容类型检测
-     */
-    private String detectContentType(String content) {
+    String detectContentType(String content) {
         String trimmed = content.trim();
-
         if (URL_PATTERN.matcher(trimmed).matches()) return "🔗";
         if (PHONE_PATTERN.matcher(trimmed).matches()) return "📞";
         if (EMAIL_PATTERN.matcher(trimmed).matches()) return "📧";
         if (ADDRESS_PATTERN.matcher(trimmed).find() && trimmed.length() < 200) return "📍";
         if (CODE_PATTERN.matcher(trimmed).find()) return "💻";
         if (trimmed.contains("\n") && trimmed.length() > 200) return "📄";
-
         return "";
     }
 
-    /**
-     * 敏感内容过滤（增强版）
-     */
     private boolean isSensitive(String content) {
-        // 纯数字 6-20 位（验证码/密码）
         if (SENSITIVE_DIGITS.matcher(content).matches()) return true;
 
         String lower = content.toLowerCase();
 
-        // 短文本中的敏感关键词
         if (!content.contains("\n") && content.length() < 200) {
             String[] keywords = {"password", "passwd", "token", "secret",
                     "api_key", "apikey", "private_key", "密码", "口令",
@@ -226,18 +237,10 @@ public class ClipboardAccessibilityService extends AccessibilityService {
             }
         }
 
-        // SSH key / PEM
         if (lower.contains("-----begin") && lower.contains("-----end")) return true;
-
-        // JWT token pattern
         if (content.matches("^eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$")) return true;
 
         return false;
-    }
-
-    @Override
-    public void onAccessibilityEvent(AccessibilityEvent event) {
-        // 仅用于保持服务存活
     }
 
     @Override

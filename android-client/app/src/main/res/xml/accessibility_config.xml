@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/accessibility_desc"
-    android:accessibilityEventTypes="typeViewTextChanged"
+    android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:notificationTimeout="500"
-    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="200"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="false"
     android:settingsActivity="com.phonemonitor.app.MainActivity" />
