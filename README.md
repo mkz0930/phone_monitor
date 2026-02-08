@@ -1,131 +1,128 @@
-# Android App Usage Monitor (Spec)
+# Android App Usage Monitor
 
-> Goal: Track **per-app usage time** on an Android phone, and send a **daily report at 23:00 (Asia/Shanghai)** to Horse.
+> Track **per-app usage time** on an Android phone, send a **daily report at 23:00 (Asia/Shanghai)** to Horse via Feishu.
 >
-> 目标：在安卓手机上统计 **各应用使用时长**，并在 **每天 23:00（上海时区）** 把报告发给 Horse。
+> 目标：在安卓手机上统计 **各应用使用时长**，并在 **每天 23:00（上海时区）** 把报告通过飞书发给 Horse。
 
-## Quick start (Architecture A server)
+## Features
 
-Requirements: Node.js 18+ (for built-in `fetch`).
+- 📊 **Per-app usage tracking** with top N ranking
+- 📁 **Category grouping** (Social / Video / Gaming / Work / Reading / Shopping / Other)
+- 📈 **Trend comparison** with yesterday (↑/↓ deltas)
+- 🔒 **Auth + rate limiting** (60 req / 15 min per IP)
+- 🌐 **CORS support**
+- 💾 **Atomic file writes** (crash-safe storage)
+- 🛑 **Graceful shutdown** (SIGTERM/SIGINT)
+- 📡 **Feishu delivery** (via OpenClaw gateway)
+
+## Quick Start
+
+Requirements: **Node.js 18+**
 
 ```bash
 cp .env.example .env
+# Edit .env with your tokens
 npm install
-npm run start
+npm start
 ```
 
-POST daily report (authenticated):
+## API
+
+### `GET /health`
+Health check. Returns `{ ok: true, uptime: <seconds> }`.
+
+### `POST /report`
+Submit a daily usage report. Requires `Authorization: Bearer <REPORT_TOKEN>`.
 
 ```bash
 curl -X POST http://localhost:3000/report \
-  -H "content-type: application/json" \
-  -H "authorization: Bearer $REPORT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $REPORT_TOKEN" \
   -d @daily.json
 ```
 
-Generate message for a date:
-
-```bash
-node scripts/generate_message.js --date 2026-01-28
-```
-
-The server schedules a daily send at **23:00 Asia/Shanghai**. If no data is received for today, it sends a “no data received” alert instead.
-Reports are stored as files in `data/` and only the latest 7 days are kept.
-
-Send a message manually (uses Clawdbot stub unless `GATEWAY_URL` is set):
-
-```bash
-node scripts/send_whatsapp.js "Hello group"
-```
-
-## 1) Scope / 范围
-- **Platform / 平台**: Android (recommended: Android 10+)
-- **Metrics / 统计项**:
-  - Per-app foreground usage time (Screen Time) / 每个应用前台使用时长
-  - Optional: total screen time, unlock count / 可选：总亮屏时长、解锁次数
-- **Reporting / 报告**:
-  - Daily summary for “today” (00:00–23:59) / 当天汇总（00:00–23:59）
-  - Send at **23:00** every day / 每天 **23:00** 定时发送
-
-## 2) Permissions & APIs / 权限与系统接口
-### Required
-- `android.permission.PACKAGE_USAGE_STATS`
-  - Granted via Settings → “Usage access” (special access) / 需要在系统设置里授予“使用情况访问权限”
-
-### Primary API
-- `UsageStatsManager`
-  - `queryUsageStats()` or `queryEvents()` to compute per-app usage
-
-### Notes
-- OEM ROMs (MIUI, etc.) may kill background jobs; need battery whitelist guidance.
-
-## 3) Data model / 数据结构
-Daily record:
+**Payload:**
 ```json
 {
-  "date": "2026-01-28",
+  "date": "2026-02-08",
   "timezone": "Asia/Shanghai",
   "apps": [
-    {"package": "com.tencent.mm", "name": "WeChat", "foreground_ms": 5234000},
-    {"package": "com.ss.android.ugc.aweme", "name": "Douyin", "foreground_ms": 3120000}
+    { "package": "com.tencent.mm", "name": "WeChat", "foreground_ms": 3600000 },
+    { "package": "com.ss.android.ugc.aweme", "name": "Douyin", "foreground_ms": 1800000 }
   ],
-  "total_foreground_ms": 11023456
+  "total_foreground_ms": 5400000
 }
 ```
-Local storage: Room DB or JSON file in app-private storage.
 
-## 4) Scheduling / 定时任务
-Use **WorkManager** (recommended) with a daily periodic work:
-- Run once per day at **23:00** (local time)
-- If the phone is in Doze mode, WorkManager may delay; mitigate via:
-  - Battery optimization whitelist instructions
-  - Optionally using `AlarmManager` (exact alarms require extra permission on Android 12+)
+### `GET /report/:date`
+Retrieve a stored report by date. Requires auth.
 
-## 5) Report format / 报告格式
-English-first + Chinese support, concise:
+```bash
+curl http://localhost:3000/report/2026-02-08 \
+  -H "Authorization: Bearer $REPORT_TOKEN"
+```
 
-Example:
-- **Daily App Usage (2026-01-28)**
-- Top apps:
-  - Douyin: 52m
-  - WeChat: 41m
-  - Browser: 18m
-- Total: 2h 13m
+## Report Format
 
-（中文）
-- **每日应用使用统计（2026-01-28）**
-- Top 应用：抖音 52 分钟，微信 41 分钟…
-- 合计：2 小时 13 分钟
+```
+📱 Daily App Usage (2026-02-08)
 
-## 6) How to send to Horse / 如何把报告发给 Horse（关键决策）
-There are **two practical delivery architectures**:
+Top Apps:
+• WeChat: 1h ↑15m
+• Douyin: 30m ↓10m
+• YouTube: 15m 🆕
 
-### A) Phone → Server/API → Clawdbot → WhatsApp (recommended)
-- Phone uploads the daily JSON/text to a small HTTP endpoint.
-- Clawdbot receives it and sends to WhatsApp via gateway.
+By Category:
+• Social: 1h
+• Video: 45m
 
-Pros: reliable, no WhatsApp automation on phone. / 优点：可靠，不需要手机端自动操作 WhatsApp。
+Total: 1h 45m ↑5m
+```
 
-### B) Phone directly sends (hard)
-- Direct WhatsApp sending from app is limited by platform restrictions.
-- Usually requires user interaction or accessibility automation (fragile).
+## Scripts
 
-Recommendation: choose **A**.
+```bash
+# Generate message for a date
+node scripts/generate_message.js --date 2026-02-08
 
-## 7) Implementation plan / 实施步骤
-1. Android app skeleton (Kotlin)
-2. Usage access permission flow + UI status indicator
-3. Collect usage data for a chosen day window
-4. Format report text
-5. Schedule daily job at 23:00
-6. Add “upload to endpoint” (if using Architecture A)
-7. Testing + battery optimization instructions
+# Send a message manually
+node scripts/send_message.js "Hello"
+```
 
-## 8) Open questions / 待确认
-1. **Which phone?** (brand/model/Android version)
-2. Do you want **top N apps** (e.g., top 10) or full list?
-3. Delivery architecture: **A** (recommended) or B?
-4. Should we include **category grouping** (Social/Video/Work)?
+## Testing
 
----
-File location: `/home/claw/tests/android_app_usage_monitor_spec.md`
+```bash
+# Start server first, then:
+npm test
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `3000` |
+| `REPORT_TOKEN` | Auth token for API | – |
+| `CORS_ORIGIN` | Allowed CORS origin | `*` |
+| `RATE_LIMIT` | Max requests per 15 min | `60` |
+| `TARGET_ID` | Feishu open_id or chat_id | – |
+| `CHANNEL` | Delivery channel | `feishu` |
+| `GATEWAY_URL` | OpenClaw gateway URL | – |
+| `TOKEN` | Gateway auth token | – |
+
+## Architecture
+
+```
+Android Phone → POST /report → Express Server → data/*.json
+                                     ↓ (23:00 cron)
+                              Format report → Feishu (via gateway)
+```
+
+Reports stored as JSON files in `data/`, auto-pruned after 7 days.
+
+## Android Client
+
+See the spec in the README for implementation details. Key points:
+- Uses `UsageStatsManager` API
+- Requires `PACKAGE_USAGE_STATS` permission
+- Schedule via WorkManager at 23:00 daily
+- POST JSON to this server's `/report` endpoint
