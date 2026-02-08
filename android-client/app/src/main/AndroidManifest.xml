@@ -32,10 +32,18 @@
             </intent-filter>
         </activity>
 
+        <!-- 无障碍服务：剪贴板监听（系统级权限，后台可读剪贴板） -->
         <service
-            android:name=".ClipboardService"
-            android:foregroundServiceType="specialUse"
-            android:exported="false" />
+            android:name=".ClipboardAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_config" />
+        </service>
 
         <receiver
             android:name=".BootReceiver"

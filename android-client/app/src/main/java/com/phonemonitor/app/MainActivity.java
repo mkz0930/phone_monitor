@@ -1,5 +1,6 @@
 package com.phonemonitor.app;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.AppOpsManager;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
@@ -8,12 +9,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
+import android.view.accessibility.AccessibilityManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ScrollView;
@@ -39,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard;
     private TextView tvStatus, tvLog;
     private ScrollView scrollLog;
-    private boolean clipboardRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
         loadPrefs();
 
-        // 预填 Webhook（如果为空）
+        // 预填 Webhook
         SharedPreferences initPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (initPrefs.getString("webhook_url", "").isEmpty()) {
             String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/24f69dd6-c2aa-4dee-9b5e-f959696878b8";
@@ -66,12 +66,6 @@ public class MainActivity extends AppCompatActivity {
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
             DailyAlarmReceiver.scheduleDailyAlarm(this);
             appendLog("✅ 已自动配置，每天 19:00 发送日报");
-        }
-
-        // 恢复剪贴板监听状态
-        clipboardRunning = initPrefs.getBoolean("clipboard_enabled", false);
-        if (clipboardRunning) {
-            startClipboardService();
         }
 
         updateStatus();
@@ -119,53 +113,35 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnClipboard.setOnClickListener(v -> {
-            if (clipboardRunning) {
-                stopClipboardService();
-                clipboardRunning = false;
-                appendLog("⏹ 剪贴板监听已关闭");
+            if (isAccessibilityEnabled()) {
+                // 已开启，跳转到设置关闭
+                appendLog("ℹ️ 跳转到无障碍设置，可关闭 Phone Monitor 服务");
             } else {
-                startClipboardService();
-                clipboardRunning = true;
-                appendLog("▶️ 剪贴板监听已开启");
+                appendLog("ℹ️ 请在无障碍设置中找到「Phone Monitor」并开启");
             }
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putBoolean("clipboard_enabled", clipboardRunning).apply();
-            updateClipboardButton();
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         });
-
-        updateClipboardButton();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         updateStatus();
-        updateClipboardButton();
     }
 
-    private void startClipboardService() {
-        Intent intent = new Intent(this, ClipboardService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
+    /**
+     * 检查无障碍服务是否已开启
+     */
+    private boolean isAccessibilityEnabled() {
+        AccessibilityManager am = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+        List<AccessibilityServiceInfo> services = am.getEnabledAccessibilityServiceList(
+                AccessibilityServiceInfo.FEEDBACK_GENERIC);
+        for (AccessibilityServiceInfo info : services) {
+            if (info.getResolveInfo().serviceInfo.packageName.equals(getPackageName())) {
+                return true;
+            }
         }
-    }
-
-    private void stopClipboardService() {
-        stopService(new Intent(this, ClipboardService.class));
-    }
-
-    private void updateClipboardButton() {
-        if (clipboardRunning) {
-            btnClipboard.setText("⏹ 关闭剪贴板监听");
-            btnClipboard.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFFF44336)); // red
-        } else {
-            btnClipboard.setText("📋 开启剪贴板监听");
-            btnClipboard.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFFFF9800)); // orange
-        }
+        return false;
     }
 
     private boolean hasUsagePermission() {
@@ -177,18 +153,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateStatus() {
         boolean hasPerm = hasUsagePermission();
+        boolean clipEnabled = isAccessibilityEnabled();
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String url = prefs.getString("webhook_url", "");
 
         StringBuilder sb = new StringBuilder();
-        sb.append(hasPerm ? "✅ 使用情况权限" : "❌ 使用情况权限未授权");
+        sb.append(hasPerm ? "✅ 使用统计" : "❌ 使用统计未授权");
         sb.append("  ");
         sb.append(url.isEmpty() ? "❌ Webhook" : "✅ Webhook");
         sb.append("\n");
-        sb.append(clipboardRunning ? "✅ 剪贴板监听中" : "⏸ 剪贴板未开启");
+        sb.append(clipEnabled ? "✅ 剪贴板监听已开启" : "❌ 剪贴板监听未开启");
         sb.append("\n");
 
-        // 下次发送时间
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
         cal.set(Calendar.HOUR_OF_DAY, 19);
         cal.set(Calendar.MINUTE, 0);
@@ -201,6 +177,17 @@ public class MainActivity extends AppCompatActivity {
 
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
+
+        // 更新剪贴板按钮
+        if (clipEnabled) {
+            btnClipboard.setText("✅ 剪贴板监听中（点击管理）");
+            btnClipboard.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // green
+        } else {
+            btnClipboard.setText("📋 开启剪贴板监听");
+            btnClipboard.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFFFF9800)); // orange
+        }
     }
 
     private void loadPrefs() {
