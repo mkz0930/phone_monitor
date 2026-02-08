@@ -33,7 +33,7 @@
         </activity>
 
         <service
-            android:name=".UsageCollectorService"
+            android:name=".ClipboardService"
             android:foregroundServiceType="specialUse"
             android:exported="false" />
 

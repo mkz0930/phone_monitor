@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -35,9 +36,10 @@ public class MainActivity extends AppCompatActivity {
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl;
-    private Button btnSave, btnTest, btnGrant, btnSendNow;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard;
     private TextView tvStatus, tvLog;
     private ScrollView scrollLog;
+    private boolean clipboardRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
         btnTest = findViewById(R.id.btn_test);
         btnGrant = findViewById(R.id.btn_grant_permission);
         btnSendNow = findViewById(R.id.btn_send_now);
+        btnClipboard = findViewById(R.id.btn_clipboard);
         tvStatus = findViewById(R.id.tv_status);
         tvLog = findViewById(R.id.tv_log);
         scrollLog = findViewById(R.id.scroll_log);
@@ -61,9 +64,14 @@ public class MainActivity extends AppCompatActivity {
             String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/24f69dd6-c2aa-4dee-9b5e-f959696878b8";
             etWebhookUrl.setText(defaultUrl);
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
-            // 首次自动注册定时任务
             DailyAlarmReceiver.scheduleDailyAlarm(this);
             appendLog("✅ 已自动配置，每天 19:00 发送日报");
+        }
+
+        // 恢复剪贴板监听状态
+        clipboardRunning = initPrefs.getBoolean("clipboard_enabled", false);
+        if (clipboardRunning) {
+            startClipboardService();
         }
 
         updateStatus();
@@ -75,8 +83,8 @@ public class MainActivity extends AppCompatActivity {
         btnSave.setOnClickListener(v -> {
             savePrefs();
             DailyAlarmReceiver.scheduleDailyAlarm(this);
-            Toast.makeText(this, "✅ 已保存，每天 19:00 自动发送", Toast.LENGTH_SHORT).show();
-            appendLog("📅 定时任务已注册：每天 19:00 自动发送");
+            Toast.makeText(this, "✅ 已保存", Toast.LENGTH_SHORT).show();
+            appendLog("💾 配置已保存");
             updateStatus();
         });
 
@@ -109,12 +117,55 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         });
+
+        btnClipboard.setOnClickListener(v -> {
+            if (clipboardRunning) {
+                stopClipboardService();
+                clipboardRunning = false;
+                appendLog("⏹ 剪贴板监听已关闭");
+            } else {
+                startClipboardService();
+                clipboardRunning = true;
+                appendLog("▶️ 剪贴板监听已开启");
+            }
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean("clipboard_enabled", clipboardRunning).apply();
+            updateClipboardButton();
+        });
+
+        updateClipboardButton();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         updateStatus();
+        updateClipboardButton();
+    }
+
+    private void startClipboardService() {
+        Intent intent = new Intent(this, ClipboardService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
+    }
+
+    private void stopClipboardService() {
+        stopService(new Intent(this, ClipboardService.class));
+    }
+
+    private void updateClipboardButton() {
+        if (clipboardRunning) {
+            btnClipboard.setText("⏹ 关闭剪贴板监听");
+            btnClipboard.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFFF44336)); // red
+        } else {
+            btnClipboard.setText("📋 开启剪贴板监听");
+            btnClipboard.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFFFF9800)); // orange
+        }
     }
 
     private boolean hasUsagePermission() {
@@ -130,12 +181,14 @@ public class MainActivity extends AppCompatActivity {
         String url = prefs.getString("webhook_url", "");
 
         StringBuilder sb = new StringBuilder();
-        sb.append(hasPerm ? "✅ 使用情况权限已授权" : "❌ 使用情况权限未授权");
+        sb.append(hasPerm ? "✅ 使用情况权限" : "❌ 使用情况权限未授权");
+        sb.append("  ");
+        sb.append(url.isEmpty() ? "❌ Webhook" : "✅ Webhook");
         sb.append("\n");
-        sb.append(url.isEmpty() ? "❌ 飞书 Webhook 未配置" : "✅ Webhook 已配置");
+        sb.append(clipboardRunning ? "✅ 剪贴板监听中" : "⏸ 剪贴板未开启");
         sb.append("\n");
 
-        // 显示下次发送时间
+        // 下次发送时间
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
         cal.set(Calendar.HOUR_OF_DAY, 19);
         cal.set(Calendar.MINUTE, 0);
@@ -144,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
             cal.add(Calendar.DAY_OF_YEAR, 1);
         }
         String nextTime = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(cal.getTime());
-        sb.append("⏰ 下次自动发送: ").append(nextTime);
+        sb.append("⏰ 下次日报: ").append(nextTime);
 
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);

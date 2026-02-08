@@ -115,6 +115,15 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- 剪贴板监听 -->
+        <Button
+            android:id="@+id/btn_clipboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📋 开启剪贴板监听"
+            android:backgroundTint="#FF9800"
+            android:layout_marginBottom="12dp" />
+
         <!-- 操作按钮 -->
         <LinearLayout
             android:layout_width="match_parent"
