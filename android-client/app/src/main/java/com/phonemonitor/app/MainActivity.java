@@ -20,11 +20,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.work.Constraints;
-import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.NetworkType;
-import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkManager;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -35,10 +30,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String PREFS_NAME = "phone_monitor_prefs";
+    static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl;
     private Button btnSave, btnTest, btnGrant, btnSendNow;
@@ -67,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
             String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/24f69dd6-c2aa-4dee-9b5e-f959696878b8";
             etWebhookUrl.setText(defaultUrl);
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
+            // 首次自动注册定时任务
+            DailyAlarmReceiver.scheduleDailyAlarm(this);
+            appendLog("✅ 已自动配置，每天 19:00 发送日报");
         }
 
         updateStatus();
@@ -77,8 +74,9 @@ public class MainActivity extends AppCompatActivity {
 
         btnSave.setOnClickListener(v -> {
             savePrefs();
-            scheduleWork();
-            Toast.makeText(this, "✅ 已保存，定时任务已启动", Toast.LENGTH_SHORT).show();
+            DailyAlarmReceiver.scheduleDailyAlarm(this);
+            Toast.makeText(this, "✅ 已保存，每天 19:00 自动发送", Toast.LENGTH_SHORT).show();
+            appendLog("📅 定时任务已注册：每天 19:00 自动发送");
             updateStatus();
         });
 
@@ -135,6 +133,18 @@ public class MainActivity extends AppCompatActivity {
         sb.append(hasPerm ? "✅ 使用情况权限已授权" : "❌ 使用情况权限未授权");
         sb.append("\n");
         sb.append(url.isEmpty() ? "❌ 飞书 Webhook 未配置" : "✅ Webhook 已配置");
+        sb.append("\n");
+
+        // 显示下次发送时间
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+        cal.set(Calendar.HOUR_OF_DAY, 19);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        if (cal.getTimeInMillis() <= System.currentTimeMillis()) {
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        String nextTime = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(cal.getTime());
+        sb.append("⏰ 下次自动发送: ").append(nextTime);
 
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
@@ -149,22 +159,6 @@ public class MainActivity extends AppCompatActivity {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                 .putString("webhook_url", etWebhookUrl.getText().toString().trim())
                 .apply();
-    }
-
-    private void scheduleWork() {
-        Constraints constraints = new Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build();
-
-        PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(
-                UsageUploadWorker.class, 6, TimeUnit.HOURS)
-                .setConstraints(constraints)
-                .build();
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                "phone_monitor_upload",
-                ExistingPeriodicWorkPolicy.UPDATE,
-                workRequest);
     }
 
     private String collectAndFormat() {
@@ -200,12 +194,19 @@ public class MainActivity extends AppCompatActivity {
 
                 totalMs += fg;
                 count++;
+                String pkg = stats.getPackageName();
                 String appName;
-                try {
-                    ApplicationInfo ai = pm.getApplicationInfo(stats.getPackageName(), 0);
-                    appName = pm.getApplicationLabel(ai).toString();
-                } catch (PackageManager.NameNotFoundException e) {
-                    appName = stats.getPackageName();
+                AppDictionary.AppInfo dictInfo = AppDictionary.lookup(pkg);
+                if (dictInfo != null) {
+                    appName = dictInfo.emoji + " " + dictInfo.name;
+                } else {
+                    try {
+                        ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+                        appName = pm.getApplicationLabel(ai).toString();
+                    } catch (PackageManager.NameNotFoundException e) {
+                        String[] parts = pkg.split("\\.");
+                        appName = parts[parts.length - 1];
+                    }
                 }
 
                 sb.append(String.format("• %s: %s\n", appName, formatMs(fg)));
