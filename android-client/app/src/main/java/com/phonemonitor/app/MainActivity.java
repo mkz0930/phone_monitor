@@ -70,9 +70,8 @@ public class MainActivity extends AppCompatActivity {
 
         updateStatus();
 
-        btnGrant.setOnClickListener(v -> {
-            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
-        });
+        btnGrant.setOnClickListener(v ->
+                startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
 
         btnSave.setOnClickListener(v -> {
             savePrefs();
@@ -87,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "⚠️ 请先授权使用情况访问", Toast.LENGTH_SHORT).show();
                 return;
             }
-            appendLog("📊 正在采集今日数据...");
+            appendLog("📊 正在采集...");
             new Thread(() -> {
                 String result = collectAndFormat();
                 runOnUiThread(() -> appendLog(result));
@@ -100,24 +99,30 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             savePrefs();
-            appendLog("📤 正在发送到飞书...");
+            btnSendNow.setEnabled(false);
+            appendLog("📤 正在发送...");
             new Thread(() -> {
                 try {
                     FeishuSender sender = new FeishuSender(this);
                     String result = sender.collectAndSend();
-                    runOnUiThread(() -> appendLog("✅ " + result));
+                    runOnUiThread(() -> {
+                        appendLog("✅ " + result);
+                        btnSendNow.setEnabled(true);
+                    });
                 } catch (Exception e) {
-                    runOnUiThread(() -> appendLog("❌ " + e.getMessage()));
+                    runOnUiThread(() -> {
+                        appendLog("❌ " + e.getMessage());
+                        btnSendNow.setEnabled(true);
+                    });
                 }
             }).start();
         });
 
         btnClipboard.setOnClickListener(v -> {
             if (isAccessibilityEnabled()) {
-                // 已开启，跳转到设置关闭
-                appendLog("ℹ️ 跳转到无障碍设置，可关闭 Phone Monitor 服务");
+                appendLog("ℹ️ 跳转到无障碍设置管理");
             } else {
-                appendLog("ℹ️ 请在无障碍设置中找到「Phone Monitor」并开启");
+                appendLog("ℹ️ 请找到「Phone Monitor」并开启");
             }
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         });
@@ -129,9 +134,6 @@ public class MainActivity extends AppCompatActivity {
         updateStatus();
     }
 
-    /**
-     * 检查无障碍服务是否已开启
-     */
     private boolean isAccessibilityEnabled() {
         AccessibilityManager am = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
         List<AccessibilityServiceInfo> services = am.getEnabledAccessibilityServiceList(
@@ -158,13 +160,29 @@ public class MainActivity extends AppCompatActivity {
         String url = prefs.getString("webhook_url", "");
 
         StringBuilder sb = new StringBuilder();
-        sb.append(hasPerm ? "✅ 使用统计" : "❌ 使用统计未授权");
+        // 权限状态行
+        sb.append(hasPerm ? "✅ 使用统计" : "❌ 使用统计");
         sb.append("  ");
         sb.append(url.isEmpty() ? "❌ Webhook" : "✅ Webhook");
         sb.append("\n");
-        sb.append(clipEnabled ? "✅ 剪贴板监听已开启" : "❌ 剪贴板监听未开启");
+
+        // 剪贴板状态
+        if (clipEnabled) {
+            int clipCount = FeishuWebhook.getSendCount(this, "clipboard_send_count");
+            String lastClip = prefs.getString("clipboard_last_content", "");
+            sb.append("✅ 剪贴板监听中");
+            if (clipCount > 0) {
+                sb.append(" · 已同步 ").append(clipCount).append(" 条");
+            }
+            if (!lastClip.isEmpty()) {
+                sb.append("\n   📝 ").append(lastClip);
+            }
+        } else {
+            sb.append("❌ 剪贴板未开启");
+        }
         sb.append("\n");
 
+        // 下次日报
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
         cal.set(Calendar.HOUR_OF_DAY, 19);
         cal.set(Calendar.MINUTE, 0);
@@ -175,18 +193,24 @@ public class MainActivity extends AppCompatActivity {
         String nextTime = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(cal.getTime());
         sb.append("⏰ 下次日报: ").append(nextTime);
 
+        // 日报发送次数
+        int reportCount = FeishuWebhook.getSendCount(this, "report_send_count");
+        if (reportCount > 0) {
+            sb.append(" · 累计 ").append(reportCount).append(" 次");
+        }
+
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
 
-        // 更新剪贴板按钮
+        // 剪贴板按钮
         if (clipEnabled) {
             btnClipboard.setText("✅ 剪贴板监听中（点击管理）");
             btnClipboard.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // green
+                    android.content.res.ColorStateList.valueOf(0xFF4CAF50));
         } else {
             btnClipboard.setText("📋 开启剪贴板监听");
             btnClipboard.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFFFF9800)); // orange
+                    android.content.res.ColorStateList.valueOf(0xFFFF9800));
         }
     }
 

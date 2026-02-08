@@ -1,19 +1,13 @@
 package com.phonemonitor.app;
 
+import android.app.usage.UsageEvents;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import org.json.JSONObject;
-
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -25,11 +19,10 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
- * 采集使用数据 → 直接通过飞书 Webhook 发送到群聊
+ * 采集使用数据 → 通过飞书 Webhook 发送到群聊
  */
 public class FeishuSender {
     private static final String TAG = "FeishuSender";
-    private static final String PREFS_NAME = "phone_monitor_prefs";
     private final Context context;
 
     public FeishuSender(Context context) {
@@ -37,12 +30,10 @@ public class FeishuSender {
     }
 
     public String collectAndSend() throws Exception {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String webhookUrl = prefs.getString("webhook_url", "");
-        if (webhookUrl.isEmpty()) throw new Exception("Webhook URL 未配置");
-
         String message = buildReport();
-        sendToFeishu(webhookUrl, message);
+        boolean ok = FeishuWebhook.sendText(context, message);
+        if (!ok) throw new Exception("发送失败（已重试）");
+        FeishuWebhook.incrementSendCount(context, "report_send_count");
         return "已发送到飞书群";
     }
 
@@ -63,6 +54,9 @@ public class FeishuSender {
 
         Map<String, UsageStats> statsMap = usm.queryAndAggregateUsageStats(startTime, endTime);
 
+        // 统计解锁次数
+        int unlockCount = countUnlocks(usm, startTime, endTime);
+
         StringBuilder sb = new StringBuilder();
         sb.append("📱 手机使用日报\n");
         sb.append("📅 ").append(dateStr).append("\n");
@@ -79,19 +73,16 @@ public class FeishuSender {
 
         long totalMs = 0;
         int count = 0;
-
-        // 分类统计 (保持插入顺序)
         LinkedHashMap<String, Long> categoryMs = new LinkedHashMap<>();
 
         for (UsageStats stats : sorted) {
             long fg = stats.getTotalTimeInForeground();
-            if (fg < 60000) continue; // 跳过 < 1分钟
+            if (fg < 60000) continue;
 
             totalMs += fg;
             count++;
             String pkg = stats.getPackageName();
 
-            // 用字典查名字，查不到用系统 label，再查不到用包名最后一段
             String appName;
             String emoji = "";
             AppDictionary.AppInfo dictInfo = AppDictionary.lookup(pkg);
@@ -103,7 +94,6 @@ public class FeishuSender {
                     ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
                     appName = pm.getApplicationLabel(ai).toString();
                 } catch (PackageManager.NameNotFoundException e) {
-                    // 取包名最后一段作为可读名
                     String[] parts = pkg.split("\\.");
                     appName = parts[parts.length - 1];
                 }
@@ -113,7 +103,7 @@ public class FeishuSender {
             String cat = dictInfo != null ? dictInfo.category : AppDictionary.getCategory(pkg);
             categoryMs.merge(cat, fg, Long::sum);
 
-            // Top 10 列表
+            // Top 10
             if (count <= 10) {
                 String rank = count <= 3 ?
                         new String[]{"🥇", "🥈", "🥉"}[count - 1] :
@@ -126,7 +116,6 @@ public class FeishuSender {
         // 分类汇总
         sb.append("\n━━━━━━━━━━━━━━━━━━\n");
         sb.append("📊 分类统计：\n");
-        // 按时长排序
         List<Map.Entry<String, Long>> catList = new ArrayList<>(categoryMs.entrySet());
         catList.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
         for (Map.Entry<String, Long> entry : catList) {
@@ -144,40 +133,38 @@ public class FeishuSender {
         } else if (totalHours <= 1) {
             sb.append(" ✅ 控制良好");
         }
+
+        // 解锁次数
+        sb.append("\n🔓 解锁: ").append(unlockCount).append("次");
+        if (unlockCount > 100) {
+            sb.append(" ⚠️");
+        } else if (unlockCount <= 30) {
+            sb.append(" ✅");
+        }
+
         sb.append("\n📱 ").append(android.os.Build.MODEL);
 
         return sb.toString();
     }
 
-    private void sendToFeishu(String webhookUrl, String text) throws Exception {
-        JSONObject content = new JSONObject();
-        content.put("text", text);
-
-        JSONObject body = new JSONObject();
-        body.put("msg_type", "text");
-        body.put("content", content);
-
-        URL url = new URL(webhookUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    /**
+     * 统计今日解锁次数（通过 KEYGUARD_HIDDEN 事件）
+     */
+    private int countUnlocks(UsageStatsManager usm, long startTime, long endTime) {
         try {
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(15000);
-            conn.setReadTimeout(15000);
-
-            byte[] payload = body.toString().getBytes(StandardCharsets.UTF_8);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(payload);
+            UsageEvents events = usm.queryEvents(startTime, endTime);
+            int count = 0;
+            UsageEvents.Event event = new UsageEvents.Event();
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event);
+                if (event.getEventType() == UsageEvents.Event.KEYGUARD_HIDDEN) {
+                    count++;
+                }
             }
-
-            int code = conn.getResponseCode();
-            Log.d(TAG, "Feishu webhook response: " + code);
-            if (code != 200) {
-                throw new Exception("飞书返回错误: " + code);
-            }
-        } finally {
-            conn.disconnect();
+            return count;
+        } catch (Exception e) {
+            Log.w(TAG, "无法统计解锁次数: " + e.getMessage());
+            return -1;
         }
     }
 }

@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.PowerManager;
 import android.util.Log;
 
 import java.util.Calendar;
@@ -20,26 +21,30 @@ public class DailyAlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.i(TAG, "⏰ 定时任务触发，开始采集并发送日报...");
+        Log.i(TAG, "⏰ 定时任务触发");
 
-        // 在后台线程执行
+        // 获取 WakeLock 防止 CPU 休眠（最多 60 秒）
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        PowerManager.WakeLock wl = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK, "PhoneMonitor:DailyReport");
+        wl.acquire(60000);
+
         new Thread(() -> {
             try {
                 FeishuSender sender = new FeishuSender(context);
                 String result = sender.collectAndSend();
-                Log.i(TAG, "✅ 日报发送成功: " + result);
+                Log.i(TAG, "✅ " + result);
             } catch (Exception e) {
-                Log.e(TAG, "❌ 日报发送失败: " + e.getMessage(), e);
+                Log.e(TAG, "❌ " + e.getMessage(), e);
+            } finally {
+                if (wl.isHeld()) wl.release();
             }
         }).start();
 
-        // 重新调度明天的闹钟（防止漂移）
+        // 重新调度明天
         scheduleDailyAlarm(context);
     }
 
-    /**
-     * 设置每天 19:00 (Asia/Shanghai) 的精确闹钟
-     */
     public static void scheduleDailyAlarm(Context context) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
@@ -49,30 +54,24 @@ public class DailyAlarmReceiver extends BroadcastReceiver {
                 context, ALARM_REQUEST_CODE, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        // 计算下一个 19:00
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
         cal.set(Calendar.HOUR_OF_DAY, 19);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
 
-        // 如果今天 19:00 已过，设为明天
         if (cal.getTimeInMillis() <= System.currentTimeMillis()) {
             cal.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        // 使用 setExactAndAllowWhileIdle 确保省电模式下也能触发
         alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 cal.getTimeInMillis(),
                 pendingIntent);
 
-        Log.i(TAG, "📅 下次日报时间: " + cal.getTime());
+        Log.i(TAG, "📅 下次日报: " + cal.getTime());
     }
 
-    /**
-     * 取消定时任务
-     */
     public static void cancelDailyAlarm(Context context) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
