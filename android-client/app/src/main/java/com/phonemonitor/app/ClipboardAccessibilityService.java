@@ -151,6 +151,9 @@ public class ClipboardAccessibilityService extends AccessibilityService {
                     .putLong("clipboard_last_time", now)
                     .apply();
 
+            // 保存到知识库
+            saveToKnowledge(content);
+
             addToBatch(content);
 
         } catch (SecurityException se) {
@@ -158,6 +161,25 @@ public class ClipboardAccessibilityService extends AccessibilityService {
             Log.w(TAG, "剪贴板访问被拒: " + se.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "处理失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 保存剪贴板内容到知识库
+     */
+    private void saveToKnowledge(String content) {
+        try {
+            String type = ContentClassifier.classifyContent(content);
+            String title = ContentClassifier.generateTitle(content, type);
+            String url = ContentClassifier.extractUrl(content);
+
+            KnowledgeDb db = KnowledgeDb.getInstance(this);
+            long id = db.insertContent(title, content, url, type, "clipboard", null);
+            if (id > 0) {
+                LogBus.post("📚", "已保存到知识库 #" + id);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "知识库保存失败: " + e.getMessage());
         }
     }
 

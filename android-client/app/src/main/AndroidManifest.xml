@@ -32,6 +32,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".KnowledgeActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
         <!-- 无障碍服务：剪贴板监听 -->
         <service
             android:name=".ClipboardAccessibilityService"

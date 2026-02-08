@@ -101,6 +101,15 @@
                     android:layout_height="44dp"
                     android:text="🔔 开启通知同步"
                     android:backgroundTint="#FF9800"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_knowledge"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="📚 知识库"
+                    android:backgroundTint="#2196F3"
                     android:textSize="13sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>

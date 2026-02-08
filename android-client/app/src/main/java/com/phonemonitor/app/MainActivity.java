@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret;
-    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnNotification;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnNotification, btnKnowledge;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
     private ScrollView scrollLog;
@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnSendNow = findViewById(R.id.btn_send_now);
         btnClipboard = findViewById(R.id.btn_clipboard);
         btnNotification = findViewById(R.id.btn_notification);
+        btnKnowledge = findViewById(R.id.btn_knowledge);
         tvStatus = findViewById(R.id.tv_status);
         tvLog = findViewById(R.id.tv_log);
         tvWebhookHeader = findViewById(R.id.tv_webhook_header);
@@ -161,6 +162,10 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
             }
             updateStatus();
+        });
+
+        btnKnowledge.setOnClickListener(v -> {
+            startActivity(new Intent(this, KnowledgeActivity.class));
         });
     }
 
@@ -267,6 +272,15 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         sb.append("⏰ 日报: ").append(nextTime);
         int reportCount = FeishuWebhook.getSendCount(this, "report_send_count");
         if (reportCount > 0) sb.append(" · 累计").append(reportCount).append("次");
+        sb.append("\n");
+
+        // 知识库
+        try {
+            int knowledgeCount = KnowledgeDb.getInstance(this).getContentCount();
+            sb.append("📚 知识库 · ").append(knowledgeCount).append("条");
+        } catch (Exception e) {
+            sb.append("📚 知识库");
+        }
 
         tvStatus.setText(sb.toString());
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
@@ -295,6 +309,14 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
             btnNotification.setText("🔔 开启通知同步");
             btnNotification.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(0xFFFF9800));
+        }
+
+        // 知识库按钮
+        try {
+            int kCount = KnowledgeDb.getInstance(this).getContentCount();
+            btnKnowledge.setText("📚 知识库" + (kCount > 0 ? " · " + kCount + "条" : ""));
+        } catch (Exception e) {
+            btnKnowledge.setText("📚 知识库");
         }
     }
 
