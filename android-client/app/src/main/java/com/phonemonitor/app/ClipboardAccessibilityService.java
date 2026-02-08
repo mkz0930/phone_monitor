@@ -181,6 +181,13 @@ public class ClipboardAccessibilityService extends AccessibilityService {
             MessageQueue.getInstance(this).send(sb.toString());
             FeishuWebhook.incrementSendCount(this, COUNT_KEY);
             Log.i(TAG, "📤 已提交 " + items.size() + " 条");
+
+            // 通知 UI 日志
+            for (String item : items) {
+                String typeTag = detectContentType(item);
+                String preview = item.length() > 80 ? item.substring(0, 80) + "..." : item;
+                LogBus.post("📋", typeTag + " " + preview);
+            }
         }).start();
     }
 

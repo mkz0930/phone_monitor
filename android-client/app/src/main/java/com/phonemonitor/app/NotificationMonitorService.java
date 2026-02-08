@@ -131,6 +131,11 @@ public class NotificationMonitorService extends NotificationListenerService {
                 FeishuWebhook.incrementSendCount(this, COUNT_KEY);
             }).start();
 
+            // 通知 UI 日志
+            String preview = title.isEmpty() ? content : title;
+            if (preview.length() > 60) preview = preview.substring(0, 60) + "...";
+            LogBus.post("🔔", appName + ": " + preview);
+
         } catch (Exception e) {
             Log.e(TAG, "处理通知失败: " + e.getMessage(), e);
         }

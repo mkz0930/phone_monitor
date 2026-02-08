@@ -35,7 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LogBus.LogListener {
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl;
@@ -164,6 +164,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        LogBus.register(this);
+        updateStatus();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LogBus.unregister(this);
+    }
+
+    @Override
+    public void onLog(String tag, String message) {
+        appendLog(tag + " " + message);
         updateStatus();
     }
 
