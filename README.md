@@ -105,7 +105,6 @@ npm test
 | `CORS_ORIGIN` | Allowed CORS origin | `*` |
 | `RATE_LIMIT` | Max requests per 15 min | `60` |
 | `TARGET_ID` | Feishu open_id or chat_id | – |
-| `CHANNEL` | Delivery channel | `feishu` |
 | `GATEWAY_URL` | OpenClaw gateway URL | – |
 | `TOKEN` | Gateway auth token | – |
 

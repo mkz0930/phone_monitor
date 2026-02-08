@@ -1,19 +1,16 @@
 import "dotenv/config";
 
 /**
- * Send a message via OpenClaw gateway or Feishu API.
- * Replaces the old WhatsApp-only sender.
+ * Send a message via OpenClaw gateway → Feishu.
  *
  * Env vars:
  *   GATEWAY_URL  – OpenClaw gateway base URL (e.g. http://localhost:3001)
  *   TOKEN        – Bearer token for the gateway
- *   TARGET_ID    – Feishu open_id / chat_id / WhatsApp group id
- *   CHANNEL      – "feishu" | "whatsapp" (default: "feishu")
+ *   TARGET_ID    – Feishu open_id or chat_id
  */
 
-export async function sendMessage({ text, target, channel }) {
+export async function sendMessage({ text, target }) {
   const TARGET = target || process.env.TARGET_ID;
-  const CHANNEL = channel || process.env.CHANNEL || "feishu";
 
   if (!TARGET) {
     throw new Error("TARGET_ID is required (set env or pass target)");
@@ -23,7 +20,7 @@ export async function sendMessage({ text, target, channel }) {
   const token = process.env.TOKEN;
 
   if (!gateway) {
-    console.log("[stub]", { target: TARGET, channel: CHANNEL, text });
+    console.log("[stub]", { target: TARGET, channel: "feishu", text });
     return { ok: true, stub: true };
   }
 
@@ -35,7 +32,7 @@ export async function sendMessage({ text, target, channel }) {
     },
     body: JSON.stringify({
       target: TARGET,
-      channel: CHANNEL,
+      channel: "feishu",
       text,
     }),
   });
