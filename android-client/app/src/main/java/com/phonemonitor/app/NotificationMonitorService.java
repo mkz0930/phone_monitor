@@ -108,7 +108,7 @@ public class NotificationMonitorService extends NotificationListenerService {
 
             StringBuilder sb = new StringBuilder();
             sb.append("🔔 通知同步\n");
-            sb.append("⏰ ").append(time).append(" · ").append(Build.MODEL).append("\n");
+            sb.append("⏰ ").append(time).append(" · ").append(DeviceNames.get()).append("\n");
             sb.append("━━━━━━━━━━━━━━━━━━\n\n");
             sb.append("📱 ").append(appName);
             if (isPriority) sb.append(" ⭐");

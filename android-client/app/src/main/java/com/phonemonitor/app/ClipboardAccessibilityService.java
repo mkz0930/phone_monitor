@@ -191,7 +191,7 @@ public class ClipboardAccessibilityService extends AccessibilityService {
                 sb.append(" (").append(items.size()).append("条)");
             }
             sb.append("\n");
-            sb.append("⏰ ").append(time).append(" · ").append(Build.MODEL).append("\n");
+            sb.append("⏰ ").append(time).append(" · ").append(DeviceNames.get()).append("\n");
             sb.append("━━━━━━━━━━━━━━━━━━\n");
 
             for (int i = 0; i < items.size(); i++) {

@@ -142,7 +142,7 @@ public class FeishuSender {
             sb.append(" ✅");
         }
 
-        sb.append("\n📱 ").append(android.os.Build.MODEL);
+        sb.append("\n📱 ").append(DeviceNames.get());
 
         return sb.toString();
     }
