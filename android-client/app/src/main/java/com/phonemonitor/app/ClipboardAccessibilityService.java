@@ -34,13 +34,16 @@ public class ClipboardAccessibilityService extends AccessibilityService {
     private static final String LAST_CLIP_KEY = "clipboard_last_content";
 
     private static final long BATCH_WINDOW_MS = 3000;
-    private static final long POLL_INTERVAL_MS = 1500; // 轮询最小间隔
+    private static final long POLL_INTERVAL_MS = 1500; // 事件轮询最小间隔
+    private static final long TIMER_POLL_MS = 2000;    // 定时轮询间隔
 
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private String lastClipHash = "";
     private long lastClipTime = 0;
     private long lastPollTime = 0;
+    private Handler timerHandler;
+    private Runnable timerRunnable;
 
     private final List<String> batchBuffer = new ArrayList<>();
     private final Handler batchHandler = new Handler(Looper.getMainLooper());
@@ -73,7 +76,18 @@ public class ClipboardAccessibilityService extends AccessibilityService {
         clipListener = this::processClipboard;
         clipboardManager.addPrimaryClipChangedListener(clipListener);
 
-        Log.i(TAG, "✅ 剪贴板监听已启动（双重检测）");
+        // 方式3：定时轮询（兜底，覆盖抖音等不触发无障碍事件的 App）
+        timerHandler = new Handler(Looper.getMainLooper());
+        timerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                processClipboard();
+                timerHandler.postDelayed(this, TIMER_POLL_MS);
+            }
+        };
+        timerHandler.postDelayed(timerRunnable, TIMER_POLL_MS);
+
+        Log.i(TAG, "✅ 剪贴板监听已启动（三重检测）");
         LogBus.post("✅", "剪贴板监听已启动");
     }
 
@@ -256,6 +270,9 @@ public class ClipboardAccessibilityService extends AccessibilityService {
         }
         if (batchRunnable != null) {
             batchHandler.removeCallbacks(batchRunnable);
+        }
+        if (timerHandler != null && timerRunnable != null) {
+            timerHandler.removeCallbacks(timerRunnable);
         }
         Log.i(TAG, "无障碍服务已停止");
     }
