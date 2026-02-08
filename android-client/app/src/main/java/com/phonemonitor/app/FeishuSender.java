@@ -8,7 +8,6 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.OutputStream;
@@ -19,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -41,12 +41,8 @@ public class FeishuSender {
         String webhookUrl = prefs.getString("webhook_url", "");
         if (webhookUrl.isEmpty()) throw new Exception("Webhook URL 未配置");
 
-        // 采集数据
         String message = buildReport();
-
-        // 发送到飞书
         sendToFeishu(webhookUrl, message);
-
         return "已发送到飞书群";
     }
 
@@ -56,7 +52,7 @@ public class FeishuSender {
 
         TimeZone tz = TimeZone.getTimeZone("Asia/Shanghai");
         Calendar cal = Calendar.getInstance(tz);
-        String dateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
+        String dateStr = new SimpleDateFormat("yyyy-MM-dd (E)", Locale.CHINA).format(cal.getTime());
 
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
@@ -68,7 +64,8 @@ public class FeishuSender {
         Map<String, UsageStats> statsMap = usm.queryAndAggregateUsageStats(startTime, endTime);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📱 手机使用日报 (").append(dateStr).append(")\n");
+        sb.append("📱 手机使用日报\n");
+        sb.append("📅 ").append(dateStr).append("\n");
         sb.append("━━━━━━━━━━━━━━━━━━\n\n");
 
         if (statsMap == null || statsMap.isEmpty()) {
@@ -83,8 +80,8 @@ public class FeishuSender {
         long totalMs = 0;
         int count = 0;
 
-        // 分类统计
-        long socialMs = 0, videoMs = 0, workMs = 0, otherMs = 0;
+        // 分类统计 (保持插入顺序)
+        LinkedHashMap<String, Long> categoryMs = new LinkedHashMap<>();
 
         for (UsageStats stats : sorted) {
             long fg = stats.getTotalTimeInForeground();
@@ -93,68 +90,63 @@ public class FeishuSender {
             totalMs += fg;
             count++;
             String pkg = stats.getPackageName();
+
+            // 用字典查名字，查不到用系统 label，再查不到用包名最后一段
             String appName;
-            try {
-                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
-                appName = pm.getApplicationLabel(ai).toString();
-            } catch (PackageManager.NameNotFoundException e) {
-                appName = pkg;
+            String emoji = "";
+            AppDictionary.AppInfo dictInfo = AppDictionary.lookup(pkg);
+            if (dictInfo != null) {
+                appName = dictInfo.name;
+                emoji = dictInfo.emoji + " ";
+            } else {
+                try {
+                    ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+                    appName = pm.getApplicationLabel(ai).toString();
+                } catch (PackageManager.NameNotFoundException e) {
+                    // 取包名最后一段作为可读名
+                    String[] parts = pkg.split("\\.");
+                    appName = parts[parts.length - 1];
+                }
             }
 
-            // 分类
-            String cat = categorize(pkg);
-            switch (cat) {
-                case "社交": socialMs += fg; break;
-                case "视频": videoMs += fg; break;
-                case "工作": workMs += fg; break;
-                default: otherMs += fg; break;
-            }
+            // 分类统计
+            String cat = dictInfo != null ? dictInfo.category : AppDictionary.getCategory(pkg);
+            categoryMs.merge(cat, fg, Long::sum);
 
+            // Top 10 列表
             if (count <= 10) {
-                sb.append(String.format("%-2d. %s  %s\n", count, appName, MainActivity.formatMs(fg)));
+                String rank = count <= 3 ?
+                        new String[]{"🥇", "🥈", "🥉"}[count - 1] :
+                        String.format("%2d.", count);
+                sb.append(String.format("%s %s%s  %s\n",
+                        rank, emoji, appName, MainActivity.formatMs(fg)));
             }
         }
 
+        // 分类汇总
         sb.append("\n━━━━━━━━━━━━━━━━━━\n");
         sb.append("📊 分类统计：\n");
-        if (socialMs > 0) sb.append("  💬 社交: ").append(MainActivity.formatMs(socialMs)).append("\n");
-        if (videoMs > 0) sb.append("  🎬 视频: ").append(MainActivity.formatMs(videoMs)).append("\n");
-        if (workMs > 0) sb.append("  💼 工作: ").append(MainActivity.formatMs(workMs)).append("\n");
-        if (otherMs > 0) sb.append("  📦 其他: ").append(MainActivity.formatMs(otherMs)).append("\n");
+        // 按时长排序
+        List<Map.Entry<String, Long>> catList = new ArrayList<>(categoryMs.entrySet());
+        catList.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+        for (Map.Entry<String, Long> entry : catList) {
+            String catEmoji = AppDictionary.getCategoryEmoji(entry.getKey());
+            sb.append(String.format("  %s %s: %s\n",
+                    catEmoji, entry.getKey(), MainActivity.formatMs(entry.getValue())));
+        }
 
+        // 总计
+        long totalHours = totalMs / 3600000;
         sb.append("\n⏱ 总计: ").append(MainActivity.formatMs(totalMs));
-        sb.append(" (").append(count).append("个应用)\n");
-        sb.append("📱 设备: ").append(android.os.Build.MODEL);
+        sb.append(" (").append(count).append("个应用)");
+        if (totalHours >= 5) {
+            sb.append(" ⚠️ 使用较多");
+        } else if (totalHours <= 1) {
+            sb.append(" ✅ 控制良好");
+        }
+        sb.append("\n📱 ").append(android.os.Build.MODEL);
 
         return sb.toString();
-    }
-
-    private String categorize(String pkg) {
-        // 社交
-        if (pkg.contains("tencent.mm") || pkg.contains("tencent.mobileqq") ||
-            pkg.contains("whatsapp") || pkg.contains("telegram") ||
-            pkg.contains("discord") || pkg.contains("instagram") ||
-            pkg.contains("twitter") || pkg.contains("weibo") ||
-            pkg.contains("zhihu") || pkg.contains("lark") ||
-            pkg.contains("wework") || pkg.contains("facebook")) {
-            return "社交";
-        }
-        // 视频
-        if (pkg.contains("ugc.aweme") || pkg.contains("musically") ||
-            pkg.contains("youtube") || pkg.contains("bili") ||
-            pkg.contains("qqlive") || pkg.contains("youku") ||
-            pkg.contains("netflix") || pkg.contains("kuaishou") ||
-            pkg.contains("disneyplus")) {
-            return "视频";
-        }
-        // 工作
-        if (pkg.contains("google.android.gm") || pkg.contains("outlook") ||
-            pkg.contains("teams") || pkg.contains("slack") ||
-            pkg.contains("notion") || pkg.contains("docs") ||
-            pkg.contains("calendar") || pkg.contains("todoist")) {
-            return "工作";
-        }
-        return "其他";
     }
 
     private void sendToFeishu(String webhookUrl, String text) throws Exception {
