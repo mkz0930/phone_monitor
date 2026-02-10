@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret;
-    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnNotification, btnKnowledge;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnClipService, btnNotification, btnKnowledge;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
     private ScrollView scrollLog;
@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnGrant = findViewById(R.id.btn_grant_permission);
         btnSendNow = findViewById(R.id.btn_send_now);
         btnClipboard = findViewById(R.id.btn_clipboard);
+        btnClipService = findViewById(R.id.btn_clip_service);
         btnNotification = findViewById(R.id.btn_notification);
         btnKnowledge = findViewById(R.id.btn_knowledge);
         tvStatus = findViewById(R.id.tv_status);
@@ -149,6 +151,29 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         });
 
+        btnClipService.setOnClickListener(v -> {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean running = ClipboardForegroundService.isServiceRunning();
+            if (running) {
+                // 停止服务
+                stopService(new Intent(this, ClipboardForegroundService.class));
+                prefs.edit().putBoolean("clipboard_service_enabled", false).apply();
+                appendLog("⏹ 后台剪贴板服务已停止");
+            } else {
+                // 启动服务
+                Intent svcIntent = new Intent(this, ClipboardForegroundService.class);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(svcIntent);
+                } else {
+                    startService(svcIntent);
+                }
+                ClipboardForegroundService.isRunning = true;
+                prefs.edit().putBoolean("clipboard_service_enabled", true).apply();
+                appendLog("✅ 后台剪贴板服务已启动");
+            }
+            updateStatus();
+        });
+
         btnNotification.setOnClickListener(v -> {
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             if (isNotificationListenerEnabled()) {
@@ -237,14 +262,23 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         // 剪贴板
         if (clipEnabled) {
             int clipCount = FeishuWebhook.getSendCount(this, "clipboard_send_count");
-            sb.append("✅ 剪贴板");
+            sb.append("✅ 剪贴板(无障碍)");
             if (clipCount > 0) sb.append(" · ").append(clipCount).append("条");
             String lastClip = prefs.getString("clipboard_last_content", "");
             if (!lastClip.isEmpty()) {
                 sb.append("\n   📝 ").append(lastClip);
             }
         } else {
-            sb.append("❌ 剪贴板未开启");
+            sb.append("❌ 剪贴板(无障碍)未开启");
+        }
+        sb.append("\n");
+
+        // 前台剪贴板服务
+        boolean clipSvcRunning = ClipboardForegroundService.isServiceRunning();
+        if (clipSvcRunning) {
+            sb.append("✅ 后台剪贴板服务运行中");
+        } else {
+            sb.append("⏹ 后台剪贴板服务未启动");
         }
         sb.append("\n");
 
@@ -287,12 +321,24 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
 
         // 剪贴板按钮
         if (clipEnabled) {
-            btnClipboard.setText("✅ 剪贴板监听中");
+            btnClipboard.setText("✅ 无障碍监听中");
             btnClipboard.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(0xFF4CAF50));
         } else {
-            btnClipboard.setText("📋 开启剪贴板监听");
+            btnClipboard.setText("📋 开启无障碍监听");
             btnClipboard.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFFFF9800));
+        }
+
+        // 前台剪贴板服务按钮
+        boolean clipSvcRunning2 = ClipboardForegroundService.isServiceRunning();
+        if (clipSvcRunning2) {
+            btnClipService.setText("✅ 后台剪贴板运行中");
+            btnClipService.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFF4CAF50));
+        } else {
+            btnClipService.setText("🔄 启动后台剪贴板服务");
+            btnClipService.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(0xFFFF9800));
         }
 

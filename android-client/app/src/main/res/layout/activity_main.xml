@@ -90,7 +90,16 @@
                     android:id="@+id/btn_clipboard"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
-                    android:text="📋 开启剪贴板监听"
+                    android:text="📋 开启无障碍监听"
+                    android:backgroundTint="#FF9800"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_clip_service"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="🔄 启动后台剪贴板服务"
                     android:backgroundTint="#FF9800"
                     android:textSize="13sp"
                     android:layout_marginBottom="8dp" />

@@ -1,16 +1,22 @@
 package com.phonemonitor.app;
 
-import android.accessibilityservice.AccessibilityService;
-import android.accessibilityservice.AccessibilityServiceInfo;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
-import android.view.accessibility.AccessibilityEvent;
+
+import androidx.core.app.NotificationCompat;
 
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -21,38 +27,42 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * 无障碍服务：监听剪贴板变化
- * 
- * 双重检测机制：
- * 1. ClipboardManager.OnPrimaryClipChangedListener（主）
- * 2. 每次无障碍事件时轮询剪贴板（备用，兼容 OPPO/vivo 等厂商）
+ * 前台服务：后台剪贴板监听
+ *
+ * Android 10+ 限制后台应用访问剪贴板，但前台服务不受此限制。
+ * 此服务通过持久通知保持前台状态，确保剪贴板监听在后台也能正常工作。
+ *
+ * 与 ClipboardAccessibilityService 共享去重状态（static lastClipHash），
+ * 避免同一内容被重复处理。
  */
-public class ClipboardAccessibilityService extends AccessibilityService {
-    private static final String TAG = "ClipA11y";
+public class ClipboardForegroundService extends Service {
+    private static final String TAG = "ClipFgSvc";
+    private static final String CHANNEL_ID = "clipboard_monitor";
+    private static final String CHANNEL_NAME = "剪贴板监听";
+    private static final int NOTIFICATION_ID = 1001;
     private static final String PREFS_NAME = "phone_monitor_prefs";
     private static final String COUNT_KEY = "clipboard_send_count";
-    private static final String LAST_CLIP_KEY = "clipboard_last_content";
 
+    private static final long POLL_INTERVAL_MS = 2000;
     private static final long BATCH_WINDOW_MS = 3000;
-    private static final long POLL_INTERVAL_MS = 1500; // 事件轮询最小间隔
-    private static final long TIMER_POLL_MS = 2000;    // 定时轮询间隔
+    private static final long NOTIFICATION_UPDATE_MS = 30000;
 
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
-    // 共享去重状态（与 ClipboardForegroundService 共用）
-    private static volatile String sharedLastClipHash = "";
-    private static final Object hashLock = new Object();
+    private Handler pollHandler;
+    private Runnable pollRunnable;
+    private Handler notifHandler;
+    private Runnable notifRunnable;
+    private NotificationManager notificationManager;
 
-    private long lastClipTime = 0;
-    private long lastPollTime = 0;
-    private Handler timerHandler;
-    private Runnable timerRunnable;
+    private int clipCount = 0;
+    private String lastPreview = "";
 
     private final List<String> batchBuffer = new ArrayList<>();
     private final Handler batchHandler = new Handler(Looper.getMainLooper());
     private Runnable batchRunnable;
 
-    // 内容类型检测
+    // 内容类型检测（与 ClipboardAccessibilityService 一致）
     private static final Pattern URL_PATTERN = Pattern.compile("^https?://\\S+$", Pattern.DOTALL);
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d[\\d\\s\\-()]{7,18}\\d$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
@@ -60,76 +70,58 @@ public class ClipboardAccessibilityService extends AccessibilityService {
     private static final Pattern ADDRESS_PATTERN = Pattern.compile("(省|市|区|县|路|街|号|楼|室|大厦|广场|小区|village|street|road|ave|blvd)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SENSITIVE_DIGITS = Pattern.compile("^\\d{6,20}$");
 
-    /**
-     * 共享去重：检查 hash 是否已处理，若未处理则更新
-     * 供 ClipboardForegroundService 调用
-     * @return true 如果已处理过（重复），false 如果是新内容
-     */
-    static boolean checkAndUpdateHash(String hash) {
-        synchronized (hashLock) {
-            if (hash.equals(sharedLastClipHash)) {
-                return true;
-            }
-            sharedLastClipHash = hash;
-            return false;
-        }
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        createNotificationChannel();
+        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     @Override
-    public void onServiceConnected() {
-        super.onServiceConnected();
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        isRunning = true;
 
-        // 配置无障碍：监听所有事件类型
-        AccessibilityServiceInfo info = getServiceInfo();
-        if (info == null) info = new AccessibilityServiceInfo();
-        info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK;
-        info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
-        info.notificationTimeout = 200;
-        info.flags = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
-        setServiceInfo(info);
+        // 启动前台通知
+        startForeground(NOTIFICATION_ID, buildNotification("📋 剪贴板监听中", "等待新内容..."));
 
-        clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-
-        // 方式1：直接监听（部分设备有效）
+        // 方式1：直接监听
         clipListener = this::processClipboard;
         clipboardManager.addPrimaryClipChangedListener(clipListener);
 
-        // 方式3：定时轮询（兜底，覆盖抖音等不触发无障碍事件的 App）
-        timerHandler = new Handler(Looper.getMainLooper());
-        timerRunnable = new Runnable() {
+        // 方式2：定时轮询（兜底）
+        pollHandler = new Handler(Looper.getMainLooper());
+        pollRunnable = new Runnable() {
             @Override
             public void run() {
                 processClipboard();
-                timerHandler.postDelayed(this, TIMER_POLL_MS);
+                pollHandler.postDelayed(this, POLL_INTERVAL_MS);
             }
         };
-        timerHandler.postDelayed(timerRunnable, TIMER_POLL_MS);
+        pollHandler.postDelayed(pollRunnable, POLL_INTERVAL_MS);
 
-        Log.i(TAG, "✅ 剪贴板监听已启动（三重检测）");
-        LogBus.post("✅", "剪贴板监听已启动");
-    }
+        // 定时更新通知
+        notifHandler = new Handler(Looper.getMainLooper());
+        notifRunnable = new Runnable() {
+            @Override
+            public void run() {
+                updateNotification();
+                notifHandler.postDelayed(this, NOTIFICATION_UPDATE_MS);
+            }
+        };
+        notifHandler.postDelayed(notifRunnable, NOTIFICATION_UPDATE_MS);
 
-    /**
-     * 方式2：每次无障碍事件时检查剪贴板（兼容 OPPO/vivo/ColorOS）
-     */
-    @Override
-    public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null) return;
+        Log.i(TAG, "✅ 前台剪贴板服务已启动");
+        LogBus.post("🔄", "前台剪贴板服务已启动");
 
-        // 节流：最少间隔 1.5 秒检查一次
-        long now = System.currentTimeMillis();
-        if (now - lastPollTime < POLL_INTERVAL_MS) return;
-        lastPollTime = now;
-
-        processClipboard();
+        return START_STICKY;
     }
 
     private void processClipboard() {
         try {
             long now = System.currentTimeMillis();
-            // 防抖 500ms
-            if (now - lastClipTime < 500) return;
 
+            // 使用共享去重状态
             ClipData clip = clipboardManager.getPrimaryClip();
             if (clip == null || clip.getItemCount() == 0) return;
 
@@ -142,10 +134,11 @@ public class ClipboardAccessibilityService extends AccessibilityService {
             String content = rawText.toString().trim();
             if (content.isEmpty() || content.length() < 2) return;
 
-            // MD5 去重（共享状态，与 ClipboardForegroundService 互斥）
+            // MD5 去重（与 ClipboardAccessibilityService 共享）
             String hash = md5(content);
-            if (checkAndUpdateHash(hash)) return;
-            lastClipTime = now;
+            if (ClipboardAccessibilityService.checkAndUpdateHash(hash)) {
+                return; // 已处理过
+            }
 
             // 截断
             if (content.length() > 5000) {
@@ -159,11 +152,15 @@ public class ClipboardAccessibilityService extends AccessibilityService {
                 return;
             }
 
-            Log.i(TAG, "📋 新内容 (" + content.length() + " chars)");
+            Log.i(TAG, "📋 [FgSvc] 新内容 (" + content.length() + " chars)");
+
+            // 更新预览
+            lastPreview = content.length() > 40 ? content.substring(0, 40) + "..." : content;
+            clipCount++;
 
             // 保存到 prefs
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                    .putString(LAST_CLIP_KEY, content.length() > 50 ?
+                    .putString("clipboard_last_content", content.length() > 50 ?
                             content.substring(0, 50) + "..." : content)
                     .putLong("clipboard_last_time", now)
                     .apply();
@@ -171,19 +168,21 @@ public class ClipboardAccessibilityService extends AccessibilityService {
             // 保存到知识库
             saveToKnowledge(content);
 
+            // 批量发送
             addToBatch(content);
 
+            // 更新通知
+            updateNotification();
+
         } catch (SecurityException se) {
-            // Android 13+ 可能限制后台剪贴板访问
-            Log.w(TAG, "剪贴板访问被拒: " + se.getMessage());
+            Log.w(TAG, "剪贴板访问被拒（将重试）: " + se.getMessage());
+            // 1秒后重试
+            pollHandler.postDelayed(this::processClipboard, 1000);
         } catch (Exception e) {
             Log.e(TAG, "处理失败: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * 保存剪贴板内容到知识库
-     */
     private void saveToKnowledge(String content) {
         try {
             String type = ContentClassifier.classifyContent(content);
@@ -254,9 +253,8 @@ public class ClipboardAccessibilityService extends AccessibilityService {
 
             MessageQueue.getInstance(this).send(sb.toString());
             FeishuWebhook.incrementSendCount(this, COUNT_KEY);
-            Log.i(TAG, "📤 已提交 " + items.size() + " 条");
+            Log.i(TAG, "📤 [FgSvc] 已提交 " + items.size() + " 条");
 
-            // 通知 UI
             for (String item : items) {
                 String typeTag = detectContentType(item);
                 String preview = item.length() > 80 ? item.substring(0, 80) + "..." : item;
@@ -265,7 +263,7 @@ public class ClipboardAccessibilityService extends AccessibilityService {
         }).start();
     }
 
-    String detectContentType(String content) {
+    private String detectContentType(String content) {
         String trimmed = content.trim();
         if (URL_PATTERN.matcher(trimmed).matches()) return "🔗";
         if (PHONE_PATTERN.matcher(trimmed).matches()) return "📞";
@@ -296,24 +294,91 @@ public class ClipboardAccessibilityService extends AccessibilityService {
         return false;
     }
 
+    // --- 通知相关 ---
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("后台剪贴板监听服务");
+            channel.setShowBadge(false);
+            channel.enableLights(false);
+            channel.enableVibration(false);
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            nm.createNotificationChannel(channel);
+        }
+    }
+
+    private Notification buildNotification(String title, String text) {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pi = PendingIntent.getActivity(this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_menu_edit)
+                .setContentIntent(pi)
+                .setOngoing(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build();
+    }
+
+    private void updateNotification() {
+        String text;
+        if (clipCount > 0) {
+            text = "已捕获 " + clipCount + " 条 · " + lastPreview;
+        } else {
+            text = "等待新内容...";
+        }
+        notificationManager.notify(NOTIFICATION_ID, buildNotification("📋 剪贴板监听中", text));
+    }
+
+    // --- 静态工具方法 ---
+
+    /**
+     * 检查前台服务是否正在运行
+     */
+    static boolean isRunning = false;
+
+    public static boolean isServiceRunning() {
+        return isRunning;
+    }
+
     @Override
-    public void onInterrupt() {
-        Log.w(TAG, "无障碍服务被中断");
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        isRunning = false;
+
         if (clipboardManager != null && clipListener != null) {
             clipboardManager.removePrimaryClipChangedListener(clipListener);
+        }
+        if (pollHandler != null && pollRunnable != null) {
+            pollHandler.removeCallbacks(pollRunnable);
+        }
+        if (notifHandler != null && notifRunnable != null) {
+            notifHandler.removeCallbacks(notifRunnable);
         }
         if (batchRunnable != null) {
             batchHandler.removeCallbacks(batchRunnable);
         }
-        if (timerHandler != null && timerRunnable != null) {
-            timerHandler.removeCallbacks(timerRunnable);
-        }
-        Log.i(TAG, "无障碍服务已停止");
+
+        Log.i(TAG, "前台剪贴板服务已停止");
+        LogBus.post("🔄", "前台剪贴板服务已停止");
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        // 应用被划掉时重启服务
+        super.onTaskRemoved(rootIntent);
+        Log.i(TAG, "任务被移除，尝试重启...");
     }
 
     private String md5(String input) {

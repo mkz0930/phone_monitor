@@ -37,6 +37,12 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <!-- 前台剪贴板监听服务 -->
+        <service
+            android:name=".ClipboardForegroundService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false" />
+
         <!-- 无障碍服务：剪贴板监听 -->
         <service
             android:name=".ClipboardAccessibilityService"
