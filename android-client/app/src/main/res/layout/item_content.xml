@@ -34,6 +34,14 @@
                 android:maxLines="2"
                 android:ellipsize="end" />
 
+            <ProgressBar
+                android:id="@+id/pb_title_loading"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="6dp"
+                android:visibility="gone" />
+
             <ImageView
                 android:id="@+id/iv_item_favorite"
                 android:layout_width="28dp"

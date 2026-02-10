@@ -176,9 +176,13 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
     @Override
     public void onClick(ContentItem item, int position) {
         // Show detail in a dialog for now
+        String titleText = item.getTypeEmoji() + " " + 
+                (item.title != null ? item.title : "内容详情");
+        String metaInfo = "#" + item.id + " · " + item.createdAt + " " + item.getSourceEmoji();
+        
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(item.getTypeEmoji() + " " + (item.title != null ? item.title : ""))
-                .setMessage(item.content)
+                .setTitle(titleText)
+                .setMessage(metaInfo + "\n\n" + item.content)
                 .setPositiveButton("关闭", null)
                 .setNeutralButton("复制", (d, w) -> {
                     android.content.ClipboardManager cm = (android.content.ClipboardManager)

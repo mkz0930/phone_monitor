@@ -83,6 +83,27 @@ public class ContentItem {
         }
     }
 
+    public String getFullTimestamp() {
+        if (createdAt == null) return "";
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
+            java.util.Date date = sdf.parse(createdAt);
+            if (date == null) return createdAt;
+            return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(date);
+        } catch (Exception e) {
+            return createdAt;
+        }
+    }
+
+    public boolean isDouyinUrl() {
+        return url != null && (url.contains("v.douyin.com") || url.contains("www.douyin.com"));
+    }
+
+    public boolean hasUrl() {
+        return url != null && !url.isEmpty() && (url.startsWith("http://") || url.startsWith("https://"));
+    }
+
     public String getPreview(int maxLen) {
         if (content == null) return "";
         String clean = content.replace("\n", " ").trim();

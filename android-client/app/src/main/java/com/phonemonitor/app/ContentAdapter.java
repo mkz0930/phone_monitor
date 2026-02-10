@@ -71,13 +71,40 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
                 ? item.title : item.getPreview(40);
         holder.tvTitle.setText(item.getTypeEmoji() + " " + title);
 
+        // 如果是链接且标题为空或是 URL，尝试异步获取标题
+        if (TitleFetcher.shouldFetchTitle(item.url) && 
+            (item.title == null || item.title.isEmpty() || item.title.startsWith("http"))) {
+            holder.tvTitle.setText(item.getTypeEmoji() + " 加载中…");
+            TitleFetcher.fetch(item.url, new TitleFetcher.Callback() {
+                @Override
+                public void onSuccess(String fetchedTitle) {
+                    item.title = fetchedTitle;
+                    holder.tvTitle.setText(item.getTypeEmoji() + " " + fetchedTitle);
+                    // 更新数据库
+                    new Thread(() -> {
+                        android.content.Context ctx = holder.itemView.getContext();
+                        KnowledgeDb.getInstance(ctx).updateTitle(item.id, fetchedTitle);
+                    }).start();
+                }
+
+                @Override
+                public void onError(String error) {
+                    // 失败时显示 URL 或预览
+                    String fallback = item.url != null && !item.url.isEmpty() 
+                            ? item.url : item.getPreview(40);
+                    holder.tvTitle.setText(item.getTypeEmoji() + " " + fallback);
+                }
+            });
+        }
+
         // Preview
         holder.tvPreview.setText(item.getPreview(100));
         holder.tvPreview.setVisibility(
                 item.content != null && !item.content.isEmpty() ? View.VISIBLE : View.GONE);
 
-        // Time + source
-        holder.tvMeta.setText(item.getRelativeTime() + " " + item.getSourceEmoji());
+        // Time + source + ID
+        holder.tvMeta.setText("#" + item.id + " · " + item.getRelativeTime() + 
+                " · " + item.getFullTimestamp() + " " + item.getSourceEmoji());
 
         // Favorite
         holder.ivFavorite.setImageResource(

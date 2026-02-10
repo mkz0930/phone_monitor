@@ -140,6 +140,17 @@ public class KnowledgeDb extends SQLiteOpenHelper {
     }
 
     /**
+     * 更新标题
+     */
+    public boolean updateTitle(long id, String title) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("title", title);
+        cv.put("updated_at", now());
+        return db.update("contents", cv, "id = ?", new String[]{String.valueOf(id)}) > 0;
+    }
+
+    /**
      * 删除内容
      */
     public boolean deleteContent(long id) {
