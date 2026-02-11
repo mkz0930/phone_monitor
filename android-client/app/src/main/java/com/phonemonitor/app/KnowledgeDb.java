@@ -19,7 +19,7 @@ import java.util.Locale;
 public class KnowledgeDb extends SQLiteOpenHelper {
     private static final String TAG = "KnowledgeDb";
     private static final String DB_NAME = "knowledge.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     private static KnowledgeDb instance;
 
@@ -60,11 +60,40 @@ public class KnowledgeDb extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_contents_type ON contents(type)");
         db.execSQL("CREATE INDEX idx_contents_created ON contents(created_at DESC)");
         db.execSQL("CREATE INDEX idx_contents_synced ON contents(synced)");
+
+        // Usage stats table (v2)
+        db.execSQL("CREATE TABLE usage_stats (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "date TEXT NOT NULL," +
+                "package_name TEXT NOT NULL," +
+                "app_name TEXT," +
+                "category TEXT," +
+                "usage_ms INTEGER DEFAULT 0," +
+                "created_at TEXT DEFAULT (datetime('now','localtime'))," +
+                "UNIQUE(date, package_name))");
+
+        db.execSQL("CREATE INDEX idx_usage_date ON usage_stats(date DESC)");
+        db.execSQL("CREATE INDEX idx_usage_package ON usage_stats(package_name)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Future migrations go here
+        if (oldVersion < 2) {
+            // Add usage_stats table
+            db.execSQL("CREATE TABLE IF NOT EXISTS usage_stats (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "date TEXT NOT NULL," +
+                    "package_name TEXT NOT NULL," +
+                    "app_name TEXT," +
+                    "category TEXT," +
+                    "usage_ms INTEGER DEFAULT 0," +
+                    "created_at TEXT DEFAULT (datetime('now','localtime'))," +
+                    "UNIQUE(date, package_name))");
+
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_usage_date ON usage_stats(date DESC)");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_usage_package ON usage_stats(package_name)");
+            Log.i(TAG, "✅ Database upgraded to v2: usage_stats table added");
+        }
     }
 
     private String now() {
@@ -238,6 +267,153 @@ public class KnowledgeDb extends SQLiteOpenHelper {
             if (tag.isEmpty()) continue;
             db.execSQL("INSERT OR IGNORE INTO tags (name, count) VALUES (?, 0)", new Object[]{tag});
             db.execSQL("UPDATE tags SET count = count + 1 WHERE name = ?", new Object[]{tag});
+        }
+    }
+
+    // ==================== Usage Stats ====================
+
+    /**
+     * 插入或更新使用统计
+     */
+    public void upsertUsageStats(String date, String packageName, String appName, String category, long usageMs) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("date", date);
+        cv.put("package_name", packageName);
+        cv.put("app_name", appName);
+        cv.put("category", category);
+        cv.put("usage_ms", usageMs);
+        cv.put("created_at", now());
+
+        long result = db.insertWithOnConflict("usage_stats", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        if (result > 0) {
+            Log.d(TAG, "📊 Usage saved: " + appName + " = " + (usageMs / 1000 / 60) + "m on " + date);
+        }
+    }
+
+    /**
+     * 获取指定日期的使用统计
+     */
+    public List<UsageStatItem> getUsageStatsByDate(String date) {
+        List<UsageStatItem> items = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT * FROM usage_stats WHERE date = ? ORDER BY usage_ms DESC",
+                new String[]{date});
+        while (cursor.moveToNext()) {
+            items.add(new UsageStatItem(cursor));
+        }
+        cursor.close();
+        return items;
+    }
+
+    /**
+     * 获取日期范围内的使用统计
+     */
+    public List<UsageStatItem> getUsageStatsRange(String startDate, String endDate) {
+        List<UsageStatItem> items = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT * FROM usage_stats WHERE date >= ? AND date <= ? ORDER BY date DESC, usage_ms DESC",
+                new String[]{startDate, endDate});
+        while (cursor.moveToNext()) {
+            items.add(new UsageStatItem(cursor));
+        }
+        cursor.close();
+        return items;
+    }
+
+    /**
+     * 获取指定日期的总使用时长
+     */
+    public long getTotalUsageByDate(String date) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT SUM(usage_ms) FROM usage_stats WHERE date = ?",
+                new String[]{date});
+        long total = 0;
+        if (cursor.moveToFirst()) {
+            total = cursor.getLong(0);
+        }
+        cursor.close();
+        return total;
+    }
+
+    /**
+     * 获取指定日期的分类统计
+     */
+    public List<CategoryStat> getCategoryStatsByDate(String date) {
+        List<CategoryStat> stats = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT category, SUM(usage_ms) as total FROM usage_stats WHERE date = ? GROUP BY category ORDER BY total DESC",
+                new String[]{date});
+        while (cursor.moveToNext()) {
+            String category = cursor.getString(0);
+            long totalMs = cursor.getLong(1);
+            stats.add(new CategoryStat(category, totalMs));
+        }
+        cursor.close();
+        return stats;
+    }
+
+    /**
+     * 获取最近 N 天的每日总使用时长（用于趋势图）
+     */
+    public List<DailyTotal> getDailyTotals(int days) {
+        List<DailyTotal> totals = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT date, SUM(usage_ms) as total FROM usage_stats GROUP BY date ORDER BY date DESC LIMIT ?",
+                new String[]{String.valueOf(days)});
+        while (cursor.moveToNext()) {
+            String date = cursor.getString(0);
+            long totalMs = cursor.getLong(1);
+            totals.add(new DailyTotal(date, totalMs));
+        }
+        cursor.close();
+        return totals;
+    }
+
+    // ==================== Helper Classes ====================
+
+    public static class UsageStatItem {
+        public long id;
+        public String date;
+        public String packageName;
+        public String appName;
+        public String category;
+        public long usageMs;
+        public String createdAt;
+
+        public UsageStatItem(Cursor cursor) {
+            this.id = cursor.getLong(cursor.getColumnIndexOrThrow("id"));
+            this.date = cursor.getString(cursor.getColumnIndexOrThrow("date"));
+            this.packageName = cursor.getString(cursor.getColumnIndexOrThrow("package_name"));
+            this.appName = cursor.getString(cursor.getColumnIndexOrThrow("app_name"));
+            this.category = cursor.getString(cursor.getColumnIndexOrThrow("category"));
+            this.usageMs = cursor.getLong(cursor.getColumnIndexOrThrow("usage_ms"));
+            this.createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"));
+        }
+    }
+
+    public static class CategoryStat {
+        public String category;
+        public long totalMs;
+
+        public CategoryStat(String category, long totalMs) {
+            this.category = category;
+            this.totalMs = totalMs;
+        }
+    }
+
+    public static class DailyTotal {
+        public String date;
+        public long totalMs;
+
+        public DailyTotal(String date, long totalMs) {
+            this.date = date;
+            this.totalMs = totalMs;
         }
     }
 }

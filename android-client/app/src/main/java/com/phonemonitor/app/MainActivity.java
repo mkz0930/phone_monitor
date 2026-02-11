@@ -77,7 +77,8 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
             String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/24f69dd6-c2aa-4dee-9b5e-f959696878b8";
             etWebhookUrl.setText(defaultUrl);
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
-            DailyAlarmReceiver.scheduleDailyAlarm(this);
+            DailyAlarmReceiver.scheduleDailyReport(this);
+            DailyAlarmReceiver.scheduleStatsCollection(this);
             appendLog("✅ 已自动配置");
         }
 
@@ -98,7 +99,8 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
 
         btnSave.setOnClickListener(v -> {
             savePrefs();
-            DailyAlarmReceiver.scheduleDailyAlarm(this);
+            DailyAlarmReceiver.scheduleDailyReport(this);
+            DailyAlarmReceiver.scheduleStatsCollection(this);
             Toast.makeText(this, "✅ 已保存", Toast.LENGTH_SHORT).show();
             appendLog("💾 配置已保存");
             updateStatus();
