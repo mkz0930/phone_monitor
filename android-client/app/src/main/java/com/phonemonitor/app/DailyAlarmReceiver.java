@@ -23,8 +23,7 @@ public class DailyAlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        String action = intent.getAction();
-        if (action == null) action = "REPORT";
+        final String action = intent.getAction() != null ? intent.getAction() : "REPORT";
 
         Log.i(TAG, "⏰ 定时任务触发: " + action);
 

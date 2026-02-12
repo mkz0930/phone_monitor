@@ -18,7 +18,8 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             Log.i("BootReceiver", "📱 开机完成，注册日报定时任务");
-            DailyAlarmReceiver.scheduleDailyAlarm(context);
+            DailyAlarmReceiver.scheduleDailyReport(context);
+            DailyAlarmReceiver.scheduleStatsCollection(context);
 
             // 如果用户之前开启了前台剪贴板服务，自动启动
             SharedPreferences prefs = context.getSharedPreferences("phone_monitor_prefs",
