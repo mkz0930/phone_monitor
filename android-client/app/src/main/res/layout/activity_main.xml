@@ -119,6 +119,15 @@
                     android:layout_height="44dp"
                     android:text="📚 知识库"
                     android:backgroundTint="#2196F3"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_dashboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="📊 Usage Dashboard"
+                    android:backgroundTint="#7C4DFF"
                     android:textSize="13sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>

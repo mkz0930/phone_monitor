@@ -37,6 +37,12 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".UsageDashboardActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.PhoneMonitor.Dashboard" />
+
         <!-- 前台剪贴板监听服务 -->
         <service
             android:name=".ClipboardForegroundService"

@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret;
-    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnClipService, btnNotification, btnKnowledge;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnClipService, btnNotification, btnKnowledge, btnDashboard;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
     private ScrollView scrollLog;
@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnClipService = findViewById(R.id.btn_clip_service);
         btnNotification = findViewById(R.id.btn_notification);
         btnKnowledge = findViewById(R.id.btn_knowledge);
+        btnDashboard = findViewById(R.id.btn_dashboard);
         tvStatus = findViewById(R.id.tv_status);
         tvLog = findViewById(R.id.tv_log);
         tvWebhookHeader = findViewById(R.id.tv_webhook_header);
@@ -193,6 +194,10 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
 
         btnKnowledge.setOnClickListener(v -> {
             startActivity(new Intent(this, KnowledgeActivity.class));
+        });
+
+        btnDashboard.setOnClickListener(v -> {
+            startActivity(new Intent(this, UsageDashboardActivity.class));
         });
     }
 

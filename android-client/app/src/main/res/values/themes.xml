@@ -9,4 +9,19 @@
         <item name="colorOnSecondary">#FFFFFF</item>
         <item name="android:statusBarColor">#1976D2</item>
     </style>
+
+    <style name="Theme.PhoneMonitor.Dashboard" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">#00E5FF</item>
+        <item name="colorPrimaryVariant">#00B8D4</item>
+        <item name="colorOnPrimary">#000000</item>
+        <item name="colorSecondary">#7C4DFF</item>
+        <item name="colorSecondaryVariant">#651FFF</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSurface">#1A1A2E</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+        <item name="android:colorBackground">#0F0F1A</item>
+        <item name="android:statusBarColor">#0F0F1A</item>
+        <item name="android:navigationBarColor">#0F0F1A</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>
