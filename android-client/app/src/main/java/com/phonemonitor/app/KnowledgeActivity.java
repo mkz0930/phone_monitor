@@ -195,33 +195,60 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
 
     @Override
     public void onLongClick(ContentItem item, int position) {
-        PopupMenu popup = new PopupMenu(this, rvContents.findViewHolderForAdapterPosition(position).itemView);
-        popup.getMenu().add("📋 复制");
-        popup.getMenu().add("🗑️ 删除");
+        // Find view holder safely
+        RecyclerView.ViewHolder vh = rvContents.findViewHolderForAdapterPosition(position);
+        View anchor = (vh != null) ? vh.itemView : rvContents;
+
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenu().add(0, 1, 0, "📋 复制内容");
+        popup.getMenu().add(0, 2, 0, "📤 分享内容");
         if (item.url != null && !item.url.isEmpty()) {
-            popup.getMenu().add("🔗 打开链接");
+            popup.getMenu().add(0, 3, 0, "🔗 打开链接");
         }
+        popup.getMenu().add(0, 4, 0, "🗑️ 删除");
 
         popup.setOnMenuItemClickListener(menuItem -> {
-            String title = menuItem.getTitle().toString();
-            if (title.contains("复制")) {
-                android.content.ClipboardManager cm = (android.content.ClipboardManager)
-                        getSystemService(CLIPBOARD_SERVICE);
-                cm.setPrimaryClip(android.content.ClipData.newPlainText("content", item.content));
-                Toast.makeText(this, "✅ 已复制", Toast.LENGTH_SHORT).show();
-            } else if (title.contains("删除")) {
-                db.deleteContent(item.id);
-                loadContents();
-                Toast.makeText(this, "🗑️ 已删除", Toast.LENGTH_SHORT).show();
-            } else if (title.contains("打开")) {
-                try {
-                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse(item.url)));
-                } catch (Exception e) {
-                    Toast.makeText(this, "❌ 无法打开链接", Toast.LENGTH_SHORT).show();
-                }
+            switch (menuItem.getItemId()) {
+                case 1: // Copy
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                            getSystemService(CLIPBOARD_SERVICE);
+                    android.content.ClipData clip = android.content.ClipData.newPlainText(
+                            "content", item.content);
+                    cm.setPrimaryClip(clip);
+                    Toast.makeText(this, "✅ 已复制到剪贴板", Toast.LENGTH_SHORT).show();
+                    return true;
+                
+                case 2: // Share
+                    android.content.Intent shareIntent = new android.content.Intent();
+                    shareIntent.setAction(android.content.Intent.ACTION_SEND);
+                    shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, item.content);
+                    shareIntent.setType("text/plain");
+                    startActivity(android.content.Intent.createChooser(shareIntent, "分享到..."));
+                    return true;
+
+                case 3: // Open Link
+                    try {
+                        startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(item.url)));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "❌ 无法打开链接: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+
+                case 4: // Delete
+                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("确认删除？")
+                        .setMessage("确定要删除这条内容吗？此操作无法撤销。")
+                        .setPositiveButton("删除", (d, w) -> {
+                            db.deleteContent(item.id);
+                            loadContents(); // Reload to refresh list
+                            Toast.makeText(this, "🗑️ 已删除", Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("取消", null)
+                        .show();
+                    return true;
             }
-            return true;
+            return false;
         });
         popup.show();
     }
