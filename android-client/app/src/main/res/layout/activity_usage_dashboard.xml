@@ -277,4 +277,12 @@
         app:tint="#FFFFFF"
         app:fabSize="normal" />
 
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:indeterminateTint="#00E5FF" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,8 +1,12 @@
 package com.phonemonitor.app;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -50,6 +54,16 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
         // Toolbar
         MaterialToolbar toolbar = findViewById(R.id.toolbar_knowledge);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        // Sync menu
+        toolbar.inflateMenu(R.menu.menu_knowledge);
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_sync) {
+                syncToFeishu();
+                return true;
+            }
+            return false;
+        });
 
         // Views
         rvContents = findViewById(R.id.rv_contents);
@@ -175,22 +189,11 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
 
     @Override
     public void onClick(ContentItem item, int position) {
-        // Show detail in a dialog for now
-        String titleText = item.getTypeEmoji() + " " + 
-                (item.title != null ? item.title : "内容详情");
-        String metaInfo = "#" + item.id + " · " + item.createdAt + " " + item.getSourceEmoji();
-        
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(titleText)
-                .setMessage(metaInfo + "\n\n" + item.content)
-                .setPositiveButton("关闭", null)
-                .setNeutralButton("复制", (d, w) -> {
-                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
-                            getSystemService(CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("content", item.content));
-                    Toast.makeText(this, "✅ 已复制", Toast.LENGTH_SHORT).show();
-                })
-                .show();
+        // Open edit dialog
+        EditContentDialog dialog = new EditContentDialog();
+        dialog.setContentItem(item);
+        dialog.setOnContentUpdatedListener(id -> loadContents());
+        dialog.show(getSupportFragmentManager(), "edit_content");
     }
 
     @Override
@@ -258,5 +261,69 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
         db.toggleFavorite(item.id);
         item.isFavorite = !item.isFavorite;
         adapter.notifyItemChanged(position);
+    }
+
+    // ==================== Feishu Sync ====================
+
+    private void syncToFeishu() {
+        SharedPreferences prefs = getSharedPreferences("phone_monitor_prefs", MODE_PRIVATE);
+        String appId = prefs.getString("feishu_app_id", "");
+        String appSecret = prefs.getString("feishu_app_secret", "");
+        String chatId = prefs.getString("feishu_sync_chat_id", "");
+
+        if (appId.isEmpty() || appSecret.isEmpty()) {
+            Toast.makeText(this, "⚠️ 请先配置飞书 App ID / Secret", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (chatId.isEmpty()) {
+            Toast.makeText(this, "⚠️ 请先配置同步群聊 ID (feishu_sync_chat_id)", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<ContentItem> unsynced = db.getUnsyncedContents();
+        if (unsynced.isEmpty()) {
+            Toast.makeText(this, "✅ 所有内容已同步", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "📤 同步 " + unsynced.size() + " 条到飞书…", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            FeishuBotApi api = new FeishuBotApi(appId, appSecret);
+            int success = 0;
+            int fail = 0;
+
+            for (ContentItem item : unsynced) {
+                StringBuilder msg = new StringBuilder();
+                msg.append(item.getTypeEmoji()).append(" ").append(item.title != null ? item.title : "无标题");
+                msg.append("\n━━━━━━━━━━━━━━━━━━\n");
+                msg.append(item.content);
+                if (item.tags != null && !item.tags.isEmpty()) {
+                    msg.append("\n🏷️ ").append(item.tags);
+                }
+                msg.append("\n⏰ ").append(item.createdAt);
+
+                boolean sent = api.sendText(chatId, msg.toString());
+                if (sent) {
+                    db.markSynced(item.id);
+                    success++;
+                } else {
+                    fail++;
+                }
+
+                // Rate limit: 100ms between messages
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            }
+
+            final int s = success, f = fail;
+            runOnUiThread(() -> {
+                if (f == 0) {
+                    Toast.makeText(this, "✅ 已同步 " + s + " 条", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "⚠️ 成功 " + s + " 条，失败 " + f + " 条", Toast.LENGTH_SHORT).show();
+                }
+                loadContents();
+            });
+        }).start();
     }
 }

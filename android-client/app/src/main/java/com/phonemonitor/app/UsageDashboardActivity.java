@@ -1,13 +1,20 @@
 package com.phonemonitor.app;
 
+import android.app.AppOpsManager;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Process;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.mikephil.charting.animation.Easing;
@@ -55,6 +62,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
     private TextView tvSelectedDate, tvTotalTime, tvTotalApps;
     private LinearLayout layoutTopApps;
     private FloatingActionButton fabRefresh;
+    private ProgressBar progressBar;
 
     private Calendar selectedDate;
     private final SimpleDateFormat dbDateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
@@ -73,6 +81,15 @@ public class UsageDashboardActivity extends AppCompatActivity {
         loadData();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Reload data when returning from settings (in case permission was granted)
+        if (hasUsageStatsPermission()) {
+            loadData();
+        }
+    }
+
     private void initViews() {
         lineChart = findViewById(R.id.line_chart);
         pieChart = findViewById(R.id.pie_chart);
@@ -81,6 +98,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         tvTotalApps = findViewById(R.id.tv_total_apps);
         layoutTopApps = findViewById(R.id.layout_top_apps);
         fabRefresh = findViewById(R.id.fab_refresh);
+        progressBar = findViewById(R.id.progress_bar);
 
         ImageButton btnBack = findViewById(R.id.btn_back);
         ImageButton btnPrev = findViewById(R.id.btn_prev_day);
@@ -190,6 +208,14 @@ public class UsageDashboardActivity extends AppCompatActivity {
     }
 
     private void loadData() {
+        // Check permission first
+        if (!hasUsageStatsPermission()) {
+            showPermissionDialog();
+            return;
+        }
+
+        showLoading(true);
+
         new Thread(() -> {
             UsageStatsDb db = UsageStatsDb.getInstance(this);
             String dateStr = dbDateFormat.format(selectedDate.getTime());
@@ -204,11 +230,29 @@ public class UsageDashboardActivity extends AppCompatActivity {
             // Load daily summary for selected date
             UsageStatsDb.DailySummary todaySummary = db.getDailySummary(dateStr);
 
+            // If no data exists for today, collect it automatically
+            Calendar today = Calendar.getInstance();
+            if (isSameDay(selectedDate, today) && records.isEmpty()) {
+                UsageStatsCollector collector = new UsageStatsCollector(this);
+                collector.collectTodayStats();
+
+                // Reload data after collection
+                records = db.getDailyUsage(dateStr);
+                todaySummary = db.getDailySummary(dateStr);
+                summaries = db.getRecentSummaries(7);
+                Collections.reverse(summaries);
+            }
+
+            final List<UsageStatsDb.DailySummary> finalSummaries = summaries;
+            final List<UsageStatsDb.AppUsageRecord> finalRecords = records;
+            final UsageStatsDb.DailySummary finalSummary = todaySummary;
+
             runOnUiThread(() -> {
-                updateSummaryCards(todaySummary, records);
-                updateLineChart(summaries);
-                updatePieChart(records);
-                updateTopApps(records);
+                showLoading(false);
+                updateSummaryCards(finalSummary, finalRecords);
+                updateLineChart(finalSummaries);
+                updatePieChart(finalRecords);
+                updateTopApps(finalRecords);
             });
         }).start();
     }
@@ -429,5 +473,37 @@ public class UsageDashboardActivity extends AppCompatActivity {
 
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density);
+    }
+
+    private boolean hasUsageStatsPermission() {
+        AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+        if (appOps == null) return false;
+
+        int mode = appOps.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                getPackageName()
+        );
+        return mode == AppOpsManager.MODE_ALLOWED;
+    }
+
+    private void showPermissionDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("需要使用权限")
+                .setMessage("应用使用统计需要「使用情况访问权限」才能显示数据。\n\n" +
+                        "请在设置中授予权限：\n" +
+                        "设置 > 应用 > 特殊访问权限 > 使用情况访问")
+                .setPositiveButton("去设置", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showLoading(boolean show) {
+        if (progressBar != null) {
+            progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
     }
 }
