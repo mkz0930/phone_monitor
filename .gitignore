@@ -7,3 +7,5 @@ android-client/.gradle/
 android-client/build/
 android-client/local.properties
 *.apk
+conversation_db/venv312/
+node_modules/

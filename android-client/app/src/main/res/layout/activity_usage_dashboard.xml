@@ -39,7 +39,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Usage Dashboard"
+                    android:text="使用统计"
                     android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="#00E5FF"

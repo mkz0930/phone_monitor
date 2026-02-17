@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         // 预填 Webhook
         SharedPreferences initPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (initPrefs.getString("webhook_url", "").isEmpty()) {
-            String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/24f69dd6-c2aa-4dee-9b5e-f959696878b8";
+            String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/48b87aef-33db-435a-90e3-2f5ae80077ba";
             etWebhookUrl.setText(defaultUrl);
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
             DailyAlarmReceiver.scheduleDailyReport(this);
@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
             if (isAccessibilityEnabled()) {
                 appendLog("ℹ️ 跳转到无障碍设置");
             } else {
-                appendLog("ℹ️ 请找到「Phone Monitor」并开启");
+                appendLog("ℹ️ 请找到「手机监控」并开启");
             }
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         });
@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
                 appendLog(!current ? "🔔 通知同步已开启" : "🔕 通知同步已关闭");
             } else {
                 // 需要授权
-                appendLog("ℹ️ 请找到「Phone Monitor」并允许通知使用权");
+                appendLog("ℹ️ 请找到「手机监控」并允许通知使用权");
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
             }
             updateStatus();

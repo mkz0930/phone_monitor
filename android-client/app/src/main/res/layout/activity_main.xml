@@ -15,7 +15,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📱 Phone Monitor"
+            android:text="📱 手机监控"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#1A1A1A"
@@ -126,7 +126,7 @@
                     android:id="@+id/btn_dashboard"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
-                    android:text="📊 Usage Dashboard"
+                    android:text="📊 使用统计"
                     android:backgroundTint="#7C4DFF"
                     android:textSize="13sp" />
             </LinearLayout>

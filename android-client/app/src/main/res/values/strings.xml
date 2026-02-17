@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Phone Monitor</string>
+    <string name="app_name">手机监控</string>
     <string name="accessibility_desc">监听剪贴板变化，自动同步复制内容到飞书群。开启后可在后台持续运行。</string>
 </resources>

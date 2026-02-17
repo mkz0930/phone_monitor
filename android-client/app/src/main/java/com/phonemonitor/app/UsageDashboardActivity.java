@@ -293,7 +293,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
             labels.add(label);
         }
 
-        LineDataSet dataSet = new LineDataSet(entries, "Usage");
+        LineDataSet dataSet = new LineDataSet(entries, "使用时长");
         dataSet.setColor(COLOR_CYAN);
         dataSet.setLineWidth(2.5f);
         dataSet.setCircleColor(COLOR_CYAN);
