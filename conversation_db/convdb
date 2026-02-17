@@ -1,0 +1,6 @@
+#!/bin/bash
+# Conversation DB CLI wrapper
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+source "$SCRIPT_DIR/venv312/bin/activate"
+python -c "from conversation_db.cli import cli; cli()" "$@"

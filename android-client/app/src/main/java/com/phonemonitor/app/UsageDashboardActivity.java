@@ -132,7 +132,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
     private void updateDateDisplay() {
         Calendar today = Calendar.getInstance();
         if (isSameDay(selectedDate, today)) {
-            tvSelectedDate.setText("Today");
+            tvSelectedDate.setText("今天");
         } else {
             tvSelectedDate.setText(displayDateFormat.format(selectedDate.getTime()));
         }
@@ -275,7 +275,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
 
     private void updateLineChart(List<UsageStatsDb.DailySummary> summaries) {
         if (summaries.isEmpty()) {
-            lineChart.setNoDataText("No data yet");
+            lineChart.setNoDataText("暂无数据");
             lineChart.setNoDataTextColor(COLOR_TEXT_DIM);
             lineChart.invalidate();
             return;
@@ -329,7 +329,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
 
     private void updatePieChart(List<UsageStatsDb.AppUsageRecord> records) {
         if (records.isEmpty()) {
-            pieChart.setNoDataText("No data for this day");
+            pieChart.setNoDataText("当天无数据");
             pieChart.setNoDataTextColor(COLOR_TEXT_DIM);
             pieChart.setCenterText("");
             pieChart.invalidate();
@@ -340,7 +340,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         Map<String, Long> categoryMap = new HashMap<>();
         long totalMs = 0;
         for (UsageStatsDb.AppUsageRecord r : records) {
-            String cat = r.category != null && !r.category.isEmpty() ? r.category : "Other";
+            String cat = r.category != null && !r.category.isEmpty() ? r.category : "其他";
             categoryMap.put(cat, categoryMap.getOrDefault(cat, 0L) + r.usageMs);
             totalMs += r.usageMs;
         }
@@ -354,7 +354,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         }
 
         if (entries.isEmpty()) {
-            entries.add(new PieEntry(100f, "Other"));
+            entries.add(new PieEntry(100f, "其他"));
         }
 
         int[] colors = {COLOR_CYAN, COLOR_PURPLE, COLOR_PINK, COLOR_AMBER,
@@ -447,7 +447,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
 
         if (records.isEmpty()) {
             TextView empty = new TextView(this);
-            empty.setText("No app usage data");
+            empty.setText("暂无应用使用数据");
             empty.setTextColor(COLOR_TEXT_DIM);
             empty.setTextSize(13f);
             empty.setGravity(Gravity.CENTER);
