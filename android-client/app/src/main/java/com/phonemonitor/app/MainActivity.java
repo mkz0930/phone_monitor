@@ -39,7 +39,7 @@ import java.util.TimeZone;
 public class MainActivity extends AppCompatActivity implements LogBus.LogListener {
     static final String PREFS_NAME = "phone_monitor_prefs";
 
-    private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret;
+    private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret, etSyncChatId;
     private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnClipService, btnNotification, btnKnowledge, btnDashboard;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         etExtraWebhooks = findViewById(R.id.et_extra_webhooks);
         etAppId = findViewById(R.id.et_app_id);
         etAppSecret = findViewById(R.id.et_app_secret);
+        etSyncChatId = findViewById(R.id.et_sync_chat_id);
         btnSave = findViewById(R.id.btn_save);
         btnTest = findViewById(R.id.btn_test);
         btnGrant = findViewById(R.id.btn_grant_permission);
@@ -379,6 +380,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         etExtraWebhooks.setText(prefs.getString("extra_webhooks", ""));
         etAppId.setText(prefs.getString("feishu_app_id", ""));
         etAppSecret.setText(prefs.getString("feishu_app_secret", ""));
+        etSyncChatId.setText(prefs.getString("feishu_sync_chat_id", ""));
     }
 
     private void savePrefs() {
@@ -387,6 +389,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
                 .putString("extra_webhooks", etExtraWebhooks.getText().toString().trim())
                 .putString("feishu_app_id", etAppId.getText().toString().trim())
                 .putString("feishu_app_secret", etAppSecret.getText().toString().trim())
+                .putString("feishu_sync_chat_id", etSyncChatId.getText().toString().trim())
                 .apply();
     }
 

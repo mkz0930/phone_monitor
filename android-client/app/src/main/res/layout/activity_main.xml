@@ -266,6 +266,25 @@
                             android:textSize="12sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:boxBackgroundMode="outline"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_sync_chat_id"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="同步群聊 ID (feishu_sync_chat_id)"
+                            android:inputType="text"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
                     <Button
                         android:id="@+id/btn_save"
                         android:layout_width="match_parent"
