@@ -1,10 +1,13 @@
 """CLI for the Horse/Claw conversation vector database."""
 
 import json
+import shutil
+from datetime import datetime
+from pathlib import Path
 
 import click
 
-from .db import ConversationDB
+from .db import ConversationDB, DB_DIR
 
 
 def _json_out(data):
@@ -16,6 +19,9 @@ def _json_out(data):
 def cli(ctx):
     """Horse/Claw conversation vector database."""
     ctx.ensure_object(dict)
+    # Only initialize DB if not running a command that doesn't need it (like backup)
+    # But backup needs DB_DIR which is imported.
+    # We'll initialize lazily inside commands if startup is slow, but for now it's fine.
     ctx.obj["db"] = ConversationDB()
 
 
@@ -141,6 +147,29 @@ def stats(ctx):
     db: ConversationDB = ctx.obj["db"]
     click.echo(f"Total messages: {db.count()}")
     click.echo(f"Sessions: {len(db.list_sessions())}")
+
+
+@cli.command()
+@click.pass_context
+def backup(ctx):
+    """Backup the database to a zip file."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_dir = Path(__file__).parent / "backups"
+    backup_dir.mkdir(exist_ok=True)
+    
+    archive_name = backup_dir / f"conversation_db_backup_{timestamp}"
+    
+    click.echo(f"Backing up {DB_DIR} to {archive_name}.zip...")
+    
+    if not DB_DIR.exists():
+        click.echo("Database directory does not exist.", err=True)
+        return
+
+    try:
+        shutil.make_archive(str(archive_name), "zip", DB_DIR)
+        click.echo(f"Backup created: {archive_name}.zip")
+    except Exception as e:
+        click.echo(f"Backup failed: {e}", err=True)
 
 
 if __name__ == "__main__":
