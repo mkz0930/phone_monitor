@@ -6,9 +6,15 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from conversation_db.db import ConversationDB
+# Add parent to path only if run as script
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+
+try:
+    from conversation_db.db import ConversationDB
+except ImportError:
+    # Try relative import if running as module
+    from .db import ConversationDB
 
 # Sessions directory
 SESSIONS_DIR = Path.home() / ".openclaw/agents/main/sessions"

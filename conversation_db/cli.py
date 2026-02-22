@@ -86,6 +86,27 @@ def list_sessions(ctx):
         click.echo(s)
 
 
+@cli.command("import")
+@click.option("--source", "-s", default="feishu", type=click.Choice(["feishu", "all"]), help="Source to import from")
+@click.pass_context
+def import_cmd(ctx, source):
+    """Import conversation sessions into the database."""
+    click.echo(f"Starting import from {source}...")
+    
+    # Lazy import to avoid circular dependencies/path issues
+    try:
+        if source == "feishu":
+            from .import_feishu_sessions import import_feishu_sessions
+            import_feishu_sessions()
+        elif source == "all":
+            from .import_all_sessions import import_all_sessions
+            import_all_sessions()
+    except ImportError as e:
+        click.echo(f"Import failed: {e}", err=True)
+    except Exception as e:
+        click.echo(f"An error occurred: {e}", err=True)
+
+
 @cli.command()
 @click.argument("message_id")
 @click.pass_context
@@ -120,3 +141,7 @@ def stats(ctx):
     db: ConversationDB = ctx.obj["db"]
     click.echo(f"Total messages: {db.count()}")
     click.echo(f"Sessions: {len(db.list_sessions())}")
+
+
+if __name__ == "__main__":
+    cli()
