@@ -73,19 +73,35 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
 
         loadPrefs();
 
+        // 初始化消息队列
+        MessageQueue.getInstance(this);
+
+        // 始终调度定时任务
+        DailyAlarmReceiver.scheduleDailyReport(this);
+        DailyAlarmReceiver.scheduleStatsCollection(this);
+
+        // 如果是首次运行或数据库为空，尝试采集最近 7 天数据
+        new Thread(() -> {
+            UsageStatsDb db = UsageStatsDb.getInstance(this);
+            if (db.getRecentSummaries(1).isEmpty() && hasUsagePermission()) {
+                appendLog("🔍 首次运行，正在采集历史数据...");
+                UsageStatsCollector collector = new UsageStatsCollector(this);
+                collector.collectRecentHistory(7);
+                runOnUiThread(() -> {
+                    appendLog("✅ 历史数据采集完成");
+                    updateStatus();
+                });
+            }
+        }).start();
+
         // 预填 Webhook
         SharedPreferences initPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (initPrefs.getString("webhook_url", "").isEmpty()) {
             String defaultUrl = "https://open.feishu.cn/open-apis/bot/v2/hook/48b87aef-33db-435a-90e3-2f5ae80077ba";
             etWebhookUrl.setText(defaultUrl);
             initPrefs.edit().putString("webhook_url", defaultUrl).apply();
-            DailyAlarmReceiver.scheduleDailyReport(this);
-            DailyAlarmReceiver.scheduleStatsCollection(this);
-            appendLog("✅ 已自动配置");
+            appendLog("✅ 已自动配置默认 Webhook");
         }
-
-        // 初始化消息队列
-        MessageQueue.getInstance(this);
 
         updateStatus();
 

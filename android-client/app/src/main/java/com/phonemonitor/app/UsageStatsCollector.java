@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -40,6 +41,21 @@ public class UsageStatsCollector {
     }
 
     /**
+     * 采集最近 N 天的使用统计
+     */
+    public void collectRecentHistory(int days) {
+        Log.i(TAG, "📊 开始采集最近 " + days + " 天的历史数据");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        Calendar cal = Calendar.getInstance();
+        
+        for (int i = 0; i < days; i++) {
+            String date = sdf.format(cal.getTime());
+            collectStatsForDate(date);
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+        }
+    }
+
+    /**
      * 采集指定日期的使用统计
      */
     public void collectStatsForDate(String date) {
@@ -58,11 +74,13 @@ public class UsageStatsCollector {
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
         long startTime = cal.getTimeInMillis();
 
         cal.set(Calendar.HOUR_OF_DAY, 23);
         cal.set(Calendar.MINUTE, 59);
         cal.set(Calendar.SECOND, 59);
+        cal.set(Calendar.MILLISECOND, 999);
         long endTime = cal.getTimeInMillis();
 
         // 获取使用统计
@@ -72,11 +90,19 @@ public class UsageStatsCollector {
             return;
         }
 
-        List<UsageStats> statsList = usm.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                startTime,
-                endTime
-        );
+        // 针对“今天”使用更准确的聚合方法
+        List<UsageStats> statsList;
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+        if (date.equals(today)) {
+            Map<String, UsageStats> statsMap = usm.queryAndAggregateUsageStats(startTime, System.currentTimeMillis());
+            statsList = new ArrayList<>(statsMap.values());
+        } else {
+            statsList = usm.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY,
+                    startTime,
+                    endTime
+            );
+        }
 
         if (statsList == null || statsList.isEmpty()) {
             Log.w(TAG, "⚠️ 未获取到使用统计数据（可能缺少权限）");
@@ -94,8 +120,8 @@ public class UsageStatsCollector {
             String packageName = stats.getPackageName();
             long usageMs = stats.getTotalTimeInForeground();
 
-            // 过滤系统应用和使用时长为 0 的应用
-            if (usageMs == 0 || isSystemApp(packageName)) {
+            // 过滤时长为 0 的应用和不需要关注的系统应用
+            if (usageMs == 0 || isExcludedSystemApp(packageName)) {
                 continue;
             }
 
@@ -153,6 +179,10 @@ public class UsageStatsCollector {
      * 获取应用名称
      */
     private String getAppName(String packageName) {
+        // 先查字典
+        AppDictionary.AppInfo dictInfo = AppDictionary.lookup(packageName);
+        if (dictInfo != null) return dictInfo.name;
+
         try {
             ApplicationInfo info = pm.getApplicationInfo(packageName, 0);
             return pm.getApplicationLabel(info).toString();
@@ -162,12 +192,26 @@ public class UsageStatsCollector {
     }
 
     /**
-     * 判断是否为系统应用
+     * 判断是否为需要排除的系统应用
      */
-    private boolean isSystemApp(String packageName) {
+    private boolean isExcludedSystemApp(String packageName) {
+        // 如果在字典中，说明是我们关注的应用，不排除（即使它是系统应用，如 Chrome）
+        if (AppDictionary.lookup(packageName) != null) {
+            return false;
+        }
+
         try {
             ApplicationInfo info = pm.getApplicationInfo(packageName, 0);
-            return (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            // 排除大部分系统应用，但保留安装在 /data 分区的应用（用户安装的）
+            // 以及排除掉一些明显的系统组件
+            if (packageName.equals("android") || 
+                packageName.startsWith("com.android.systemui") ||
+                packageName.startsWith("com.google.android.permissioncontroller")) {
+                return true;
+            }
+            
+            return (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0 && 
+                   (info.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
