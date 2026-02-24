@@ -276,6 +276,35 @@ public class UsageStatsDb extends SQLiteOpenHelper {
         return new WeeklyPattern(weekAvg, weekdayAvg, weekendAvg, peakDate, peakUsage);
     }
 
+    /**
+     * 获取指定日期之前的 N 天汇总统计（包含空缺日期，用 0 填充）
+     */
+    public List<DailySummary> getRecentSummariesForRange(String endDateStr, int days) {
+        List<DailySummary> result = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        Calendar cal = Calendar.getInstance();
+        try {
+            cal.setTime(sdf.parse(endDateStr));
+        } catch (Exception e) {
+            Log.e(TAG, "日期解析失败: " + endDateStr);
+        }
+
+        // 从 endDate 向前推 days-1 天
+        cal.add(Calendar.DAY_OF_YEAR, -(days - 1));
+
+        for (int i = 0; i < days; i++) {
+            String date = sdf.format(cal.getTime());
+            DailySummary summary = getDailySummary(date);
+            if (summary == null) {
+                // 创建一个空汇总
+                summary = new DailySummary(date, 0, 0, "", "");
+            }
+            result.add(summary);
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        return result;
+    }
+
     // ==================== 数据模型 ====================
 
     public static class AppUsageRecord {
@@ -305,6 +334,14 @@ public class UsageStatsDb extends SQLiteOpenHelper {
         public int totalApps;
         public String topApp;
         public String topCategory;
+
+        public DailySummary(String date, long totalUsageMs, int totalApps, String topApp, String topCategory) {
+            this.date = date;
+            this.totalUsageMs = totalUsageMs;
+            this.totalApps = totalApps;
+            this.topApp = topApp;
+            this.topCategory = topCategory;
+        }
 
         public DailySummary(Cursor cursor) {
             this.id = cursor.getLong(cursor.getColumnIndexOrThrow("id"));

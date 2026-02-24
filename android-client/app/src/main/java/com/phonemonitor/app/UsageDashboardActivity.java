@@ -193,9 +193,9 @@ public class UsageDashboardActivity extends AppCompatActivity {
         pieChart.setRotationEnabled(true);
         pieChart.setHighlightPerTapEnabled(true);
         pieChart.setEntryLabelColor(COLOR_TEXT);
-        pieChart.setEntryLabelTextSize(11f);
+        pieChart.setEntryLabelTextSize(13f);
         pieChart.setCenterTextColor(COLOR_TEXT);
-        pieChart.setCenterTextSize(14f);
+        pieChart.setCenterTextSize(15f);
 
         Legend legend = pieChart.getLegend();
         legend.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
@@ -203,7 +203,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
         legend.setDrawInside(false);
         legend.setTextColor(COLOR_TEXT_DIM);
-        legend.setTextSize(11f);
+        legend.setTextSize(12f);
         legend.setWordWrapEnabled(true);
     }
 
@@ -221,8 +221,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
             String dateStr = dbDateFormat.format(selectedDate.getTime());
 
             // Load 7-day summaries for line chart
-            List<UsageStatsDb.DailySummary> summaries = db.getRecentSummaries(7);
-            Collections.reverse(summaries);
+            List<UsageStatsDb.DailySummary> summaries = db.getRecentSummariesForRange(dateStr, 7);
 
             // Load daily usage for selected date (pie chart + top apps)
             List<UsageStatsDb.AppUsageRecord> records = db.getDailyUsage(dateStr);
@@ -369,7 +368,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         dataSet.setSliceSpace(2f);
         dataSet.setSelectionShift(6f);
         dataSet.setValueTextColor(Color.WHITE);
-        dataSet.setValueTextSize(11f);
+        dataSet.setValueTextSize(13f);
         dataSet.setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
@@ -415,7 +414,9 @@ public class UsageDashboardActivity extends AppCompatActivity {
             nameRow.setOrientation(LinearLayout.HORIZONTAL);
 
             TextView tvName = new TextView(this);
-            tvName.setText(r.appName != null ? r.appName : r.packageName);
+            AppDictionary.AppInfo appInfo = AppDictionary.lookup(r.packageName);
+            String displayName = appInfo != null ? appInfo.emoji + " " + appInfo.name : (r.appName != null ? r.appName : r.packageName);
+            tvName.setText(displayName);
             tvName.setTextColor(COLOR_TEXT);
             tvName.setTextSize(13f);
             tvName.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
