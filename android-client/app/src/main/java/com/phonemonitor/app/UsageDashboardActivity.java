@@ -13,6 +13,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -60,6 +61,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
     private LineChart lineChart;
     private PieChart pieChart;
     private TextView tvSelectedDate, tvTotalTime, tvTotalApps;
+    private View cardTotalTime;
     private LinearLayout layoutTopApps;
     private FloatingActionButton fabRefresh;
     private ProgressBar progressBar;
@@ -96,6 +98,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         tvSelectedDate = findViewById(R.id.tv_selected_date);
         tvTotalTime = findViewById(R.id.tv_total_time);
         tvTotalApps = findViewById(R.id.tv_total_apps);
+        cardTotalTime = findViewById(R.id.card_total_time);
         layoutTopApps = findViewById(R.id.layout_top_apps);
         fabRefresh = findViewById(R.id.fab_refresh);
         progressBar = findViewById(R.id.progress_bar);
@@ -119,6 +122,10 @@ public class UsageDashboardActivity extends AppCompatActivity {
                 updateDateDisplay();
                 loadData();
             }
+        });
+
+        cardTotalTime.setOnClickListener(v -> {
+            showDailyUsageDetails();
         });
 
         fabRefresh.setOnClickListener(v -> {
@@ -253,6 +260,43 @@ public class UsageDashboardActivity extends AppCompatActivity {
                 updateLineChart(finalSummaries);
                 updatePieChart(finalRecords);
                 updateTopApps(finalRecords);
+            });
+        }).start();
+    }
+
+    private void showDailyUsageDetails() {
+        showLoading(true);
+        new Thread(() -> {
+            UsageStatsDb db = UsageStatsDb.getInstance(this);
+            String dateStr = dbDateFormat.format(selectedDate.getTime());
+            List<UsageStatsDb.AppUsageRecord> records = db.getDailyUsage(dateStr);
+
+            runOnUiThread(() -> {
+                showLoading(false);
+                if (records.isEmpty()) {
+                    Toast.makeText(this, "暂无详细数据", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                StringBuilder sb = new StringBuilder();
+                long totalMs = 0;
+                for (UsageStatsDb.AppUsageRecord r : records) {
+                    if (r.usageMs < 1000) continue;
+                    totalMs += r.usageMs;
+                    
+                    AppDictionary.AppInfo appInfo = AppDictionary.lookup(r.packageName);
+                    String name = appInfo != null ? appInfo.emoji + " " + appInfo.name : (r.appName != null ? r.appName : r.packageName);
+                    sb.append(String.format("• %s: %s\n", name, formatDuration(r.usageMs)));
+                }
+
+                String title = tvSelectedDate.getText().toString() + " 详细数据";
+                String totalStr = "\n📊 总时长汇总: " + formatDuration(totalMs);
+                
+                new AlertDialog.Builder(this)
+                        .setTitle(title)
+                        .setMessage(sb.toString() + totalStr)
+                        .setPositiveButton("确定", null)
+                        .show();
             });
         }).start();
     }

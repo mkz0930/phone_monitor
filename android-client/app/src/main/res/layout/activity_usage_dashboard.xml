@@ -102,13 +102,15 @@
                 android:layout_marginBottom="12dp">
 
                 <androidx.cardview.widget.CardView
+                    android:id="@+id/card_total_time"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="#1A1A2E"
-                    android:layout_marginEnd="6dp">
+                    android:layout_marginEnd="6dp"
+                    android:foreground="?attr/selectableItemBackground">
 
                     <LinearLayout
                         android:layout_width="match_parent"
