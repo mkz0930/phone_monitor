@@ -61,7 +61,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
     private LineChart lineChart;
     private PieChart pieChart;
     private TextView tvSelectedDate, tvTotalTime, tvTotalApps;
-    private View cardTotalTime;
+    private View cardTotalTime, cardTotalApps;
     private LinearLayout layoutTopApps;
     private FloatingActionButton fabRefresh;
     private ProgressBar progressBar;
@@ -99,6 +99,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
         tvTotalTime = findViewById(R.id.tv_total_time);
         tvTotalApps = findViewById(R.id.tv_total_apps);
         cardTotalTime = findViewById(R.id.card_total_time);
+        cardTotalApps = findViewById(R.id.card_total_apps);
         layoutTopApps = findViewById(R.id.layout_top_apps);
         fabRefresh = findViewById(R.id.fab_refresh);
         progressBar = findViewById(R.id.progress_bar);
@@ -126,6 +127,10 @@ public class UsageDashboardActivity extends AppCompatActivity {
 
         cardTotalTime.setOnClickListener(v -> {
             showDailyUsageDetails();
+        });
+
+        cardTotalApps.setOnClickListener(v -> {
+            showAppBreakdown();
         });
 
         fabRefresh.setOnClickListener(v -> {
@@ -260,6 +265,72 @@ public class UsageDashboardActivity extends AppCompatActivity {
                 updateLineChart(finalSummaries);
                 updatePieChart(finalRecords);
                 updateTopApps(finalRecords);
+            });
+        }).start();
+    }
+
+    private void showAppBreakdown() {
+        showLoading(true);
+        new Thread(() -> {
+            UsageStatsDb db = UsageStatsDb.getInstance(this);
+            String dateStr = dbDateFormat.format(selectedDate.getTime());
+            List<UsageStatsDb.AppUsageRecord> records = db.getDailyUsage(dateStr);
+
+            runOnUiThread(() -> {
+                showLoading(false);
+                if (records.isEmpty()) {
+                    Toast.makeText(this, "暂无应用数据", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                long totalMs = 0;
+                for (UsageStatsDb.AppUsageRecord r : records) totalMs += r.usageMs;
+
+                StringBuilder sb = new StringBuilder();
+                for (UsageStatsDb.AppUsageRecord r : records) {
+                    if (r.usageMs < 1000) continue;
+                    float pct = totalMs > 0 ? (r.usageMs * 100f / totalMs) : 0;
+                    
+                    AppDictionary.AppInfo appInfo = AppDictionary.lookup(r.packageName);
+                    String name = appInfo != null ? appInfo.emoji + " " + appInfo.name : (r.appName != null ? r.appName : r.packageName);
+                    sb.append(String.format(Locale.getDefault(), "• %s: %s (%.1f%%)\n", 
+                            name, formatDuration(r.usageMs), pct));
+                }
+
+                new AlertDialog.Builder(this)
+                        .setTitle("各应用使用占比")
+                        .setMessage(sb.toString())
+                        .setPositiveButton("确定", null)
+                        .show();
+            });
+        }).start();
+    }
+
+    private void showAppTrend(String packageName, String appName) {
+        showLoading(true);
+        new Thread(() -> {
+            UsageStatsDb db = UsageStatsDb.getInstance(this);
+            List<UsageStatsDb.AppUsageRecord> history = db.getAppTrend(packageName, 7);
+            Collections.reverse(history);
+
+            runOnUiThread(() -> {
+                showLoading(false);
+                if (history.isEmpty()) {
+                    Toast.makeText(this, "暂无历史趋势", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                StringBuilder sb = new StringBuilder();
+                for (UsageStatsDb.AppUsageRecord r : history) {
+                    String shortDate = r.date.length() >= 10 ? r.date.substring(5) : r.date;
+                    sb.append(String.format("📅 %s: %s\n", shortDate, formatDuration(r.usageMs)));
+                }
+
+                new AlertDialog.Builder(this)
+                        .setTitle(appName + " 7天趋势")
+                        .setMessage(sb.toString())
+                        .setPositiveButton("确定", null)
+                        .show();
             });
         }).start();
     }
@@ -449,6 +520,17 @@ public class UsageDashboardActivity extends AppCompatActivity {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(0, 8, 0, 8);
+            row.setClickable(true);
+            row.setFocusable(true);
+            int[] attrs = new int[]{android.R.attr.selectableItemBackground};
+            android.content.res.TypedArray ta = obtainStyledAttributes(attrs);
+            row.setBackground(ta.getDrawable(0));
+            ta.recycle();
+            
+            final String pkg = r.packageName;
+            AppDictionary.AppInfo appInfoRow = AppDictionary.lookup(pkg);
+            final String name = appInfoRow != null ? appInfoRow.name : (r.appName != null ? r.appName : r.packageName);
+            row.setOnClickListener(v -> showAppTrend(pkg, name));
 
             // Rank number
             TextView tvRank = new TextView(this);
