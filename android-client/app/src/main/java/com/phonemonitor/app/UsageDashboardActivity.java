@@ -43,15 +43,15 @@ import java.util.Map;
 
 public class UsageDashboardActivity extends AppCompatActivity {
 
-    private static final int COLOR_CYAN = Color.parseColor("#00E5FF");
-    private static final int COLOR_PURPLE = Color.parseColor("#7C4DFF");
-    private static final int COLOR_PINK = Color.parseColor("#FF4081");
-    private static final int COLOR_AMBER = Color.parseColor("#FFD740");
-    private static final int COLOR_GREEN = Color.parseColor("#69F0AE");
-    private static final int COLOR_ORANGE = Color.parseColor("#FFAB40");
-    private static final int COLOR_BLUE = Color.parseColor("#448AFF");
-    private static final int COLOR_RED = Color.parseColor("#FF5252");
-    private static final int COLOR_TEAL = Color.parseColor("#64FFDA");
+    private static final int COLOR_CYAN = Color.parseColor("#00FBFF");   // Brighter Cyan
+    private static final int COLOR_PURPLE = Color.parseColor("#9D7AFF"); // Brighter Purple
+    private static final int COLOR_PINK = Color.parseColor("#FF599B");   // Brighter Pink
+    private static final int COLOR_AMBER = Color.parseColor("#FFD700");  // Gold/Amber
+    private static final int COLOR_GREEN = Color.parseColor("#00FF88");  // Brighter Green
+    private static final int COLOR_ORANGE = Color.parseColor("#FF8C00"); // Dark Orange
+    private static final int COLOR_BLUE = Color.parseColor("#3399FF");   // Sky Blue
+    private static final int COLOR_RED = Color.parseColor("#FF3333");    // Brighter Red
+    private static final int COLOR_TEAL = Color.parseColor("#00ECC1");   // Brighter Teal
     private static final int COLOR_SURFACE = Color.parseColor("#1A1A2E");
     private static final int COLOR_TEXT = Color.parseColor("#E0E0E0");
     private static final int COLOR_TEXT_DIM = Color.parseColor("#888888");
@@ -193,9 +193,10 @@ public class UsageDashboardActivity extends AppCompatActivity {
         pieChart.setRotationEnabled(true);
         pieChart.setHighlightPerTapEnabled(true);
         pieChart.setEntryLabelColor(COLOR_TEXT);
-        pieChart.setEntryLabelTextSize(13f);
+        pieChart.setEntryLabelTextSize(12f);
         pieChart.setCenterTextColor(COLOR_TEXT);
         pieChart.setCenterTextSize(15f);
+        pieChart.setExtraOffsets(20, 0, 20, 0); // Room for outside labels
 
         Legend legend = pieChart.getLegend();
         legend.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
@@ -365,10 +366,19 @@ public class UsageDashboardActivity extends AppCompatActivity {
             colorList.add(colors[i % colors.length]);
         }
         dataSet.setColors(colorList);
-        dataSet.setSliceSpace(2f);
-        dataSet.setSelectionShift(6f);
-        dataSet.setValueTextColor(Color.WHITE);
-        dataSet.setValueTextSize(13f);
+        dataSet.setSliceSpace(3f);
+        dataSet.setSelectionShift(8f);
+
+        // Labels outside for better readability if slices are small
+        dataSet.setXValuePosition(PieDataSet.ValuePosition.OUTSIDE_SLICE);
+        dataSet.setYValuePosition(PieDataSet.ValuePosition.OUTSIDE_SLICE);
+        dataSet.setValueLineColor(COLOR_TEXT_DIM);
+        dataSet.setValueLinePart1Length(0.4f);
+        dataSet.setValueLinePart2Length(0.4f);
+        dataSet.setUsingSliceColorAsValueLineColor(true);
+
+        dataSet.setValueTextColor(COLOR_TEXT);
+        dataSet.setValueTextSize(12f);
         dataSet.setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
