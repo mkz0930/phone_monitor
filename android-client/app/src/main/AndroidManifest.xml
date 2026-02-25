@@ -43,6 +43,12 @@
             android:parentActivityName=".MainActivity"
             android:theme="@style/Theme.PhoneMonitor.Dashboard" />
 
+        <activity
+            android:name=".GrowthActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.PhoneMonitor.Dashboard" />
+
         <!-- 前台剪贴板监听服务 -->
         <service
             android:name=".ClipboardForegroundService"

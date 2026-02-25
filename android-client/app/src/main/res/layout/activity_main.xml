@@ -128,6 +128,15 @@
                     android:layout_height="44dp"
                     android:text="📊 使用统计"
                     android:backgroundTint="#7C4DFF"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_growth"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="📈 成长建议"
+                    android:backgroundTint="#9D7AFF"
                     android:textSize="13sp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
