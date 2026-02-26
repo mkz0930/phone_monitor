@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret, etSyncChatId;
-    private Button btnSave, btnTest, btnGrant, btnSendNow, btnKnowledge, btnDashboard, btnGrowth;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnKnowledge, btnDashboard, btnGrowth, btnCheckUpdate;
     private SwitchMaterial btnClipboard, btnClipService, btnNotification;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
@@ -69,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnKnowledge = findViewById(R.id.btn_knowledge);
         btnDashboard = findViewById(R.id.btn_dashboard);
         btnGrowth = findViewById(R.id.btn_growth);
+        btnCheckUpdate = findViewById(R.id.btn_check_update);
         tvStatus = findViewById(R.id.tv_status);
         tvLog = findViewById(R.id.tv_log);
         tvWebhookHeader = findViewById(R.id.tv_webhook_header);
@@ -224,6 +225,14 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnGrowth.setOnClickListener(v -> {
             startActivity(new Intent(this, GrowthActivity.class));
         });
+
+        btnCheckUpdate.setOnClickListener(v -> {
+            appendLog("🔍 正在检查更新...");
+            AppUpdater.checkForUpdateManual(this);
+        });
+
+        // 自动检查更新（静默）
+        AppUpdater.checkForUpdate(this);
     }
 
     @Override

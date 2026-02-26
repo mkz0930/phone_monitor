@@ -162,6 +162,15 @@
                         android:layout_weight="1"
                         android:text="📈 成长"
                         android:textColor="@color/pink_accent" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_check_update"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🔄 更新"
+                        android:textColor="@color/text_dimmed" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
