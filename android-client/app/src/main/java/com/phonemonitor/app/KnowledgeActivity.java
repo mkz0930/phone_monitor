@@ -21,6 +21,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
@@ -57,9 +58,28 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
 
         // Sync menu
         toolbar.inflateMenu(R.menu.menu_knowledge);
+        
+        // Init Auto-sync state
+        SharedPreferences prefs = getSharedPreferences("phone_monitor_prefs", MODE_PRIVATE);
+        boolean isAutoSync = prefs.getBoolean("knowledge_auto_sync", false);
+        MenuItem autoSyncItem = toolbar.getMenu().findItem(R.id.action_auto_sync);
+        if (autoSyncItem != null) {
+            autoSyncItem.setChecked(isAutoSync);
+        }
+
         toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_sync) {
+            int id = item.getItemId();
+            if (id == R.id.action_sync) {
                 syncToFeishu();
+                return true;
+            } else if (id == R.id.action_auto_sync) {
+                boolean newState = !item.isChecked();
+                item.setChecked(newState);
+                getSharedPreferences("phone_monitor_prefs", MODE_PRIVATE)
+                        .edit()
+                        .putBoolean("knowledge_auto_sync", newState)
+                        .apply();
+                Toast.makeText(this, newState ? "✅ 已开启自动同步" : "⏳ 已关闭自动同步", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;
@@ -239,7 +259,7 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
                     return true;
 
                 case 4: // Delete
-                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                    new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
                         .setTitle("确认删除？")
                         .setMessage("确定要删除这条内容吗？此操作无法撤销。")
                         .setPositiveButton("删除", (d, w) -> {

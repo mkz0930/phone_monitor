@@ -24,4 +24,21 @@
         <item name="android:navigationBarColor">#0F0F1A</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
+    <style name="Theme.PhoneMonitor.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="android:background">#1A1A2E</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:textColorPrimary">#E0E0E0</item>
+        <item name="android:textColorSecondary">#888888</item>
+        <item name="colorSurface">#1A1A2E</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+        <item name="colorPrimary">#00E5FF</item>
+        <item name="colorSecondary">#7C4DFF</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.PhoneMonitor.MediumComponent</item>
+    </style>
+
+    <style name="ShapeAppearance.PhoneMonitor.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
 </resources>

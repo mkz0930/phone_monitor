@@ -23,9 +23,10 @@ import java.util.regex.Pattern;
 /**
  * 无障碍服务：监听剪贴板变化
  * 
- * 双重检测机制：
+ * 三重检测机制：
  * 1. ClipboardManager.OnPrimaryClipChangedListener（主）
  * 2. 每次无障碍事件时轮询剪贴板（备用，兼容 OPPO/vivo 等厂商）
+ * 3. 定时轮询（兜底）
  */
 public class ClipboardAccessibilityService extends AccessibilityService {
     private static final String TAG = "ClipA11y";
@@ -39,8 +40,10 @@ public class ClipboardAccessibilityService extends AccessibilityService {
 
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
-    // 共享去重状态（与 ClipboardForegroundService 共用）
+    
+    // 共享去重状态
     private static volatile String sharedLastClipHash = "";
+    private static volatile long sharedLastClipTime = 0;
     private static final Object hashLock = new Object();
 
     private long lastClipTime = 0;
@@ -62,15 +65,23 @@ public class ClipboardAccessibilityService extends AccessibilityService {
 
     /**
      * 共享去重：检查 hash 是否已处理，若未处理则更新
-     * 供 ClipboardForegroundService 调用
+     * 增加了 500ms 的全局防抖逻辑，防止多服务同时触发导致的重复
      * @return true 如果已处理过（重复），false 如果是新内容
      */
     static boolean checkAndUpdateHash(String hash) {
         synchronized (hashLock) {
+            long now = System.currentTimeMillis();
+            // 1. 如果内容哈希一致，判定为重复
             if (hash.equals(sharedLastClipHash)) {
                 return true;
             }
+            // 2. 如果距离上一次成功捕获小于 500ms，判定为可能的重复触发
+            if (now - sharedLastClipTime < 500) {
+                return true;
+            }
+            
             sharedLastClipHash = hash;
+            sharedLastClipTime = now;
             return false;
         }
     }
@@ -127,8 +138,8 @@ public class ClipboardAccessibilityService extends AccessibilityService {
     private void processClipboard() {
         try {
             long now = System.currentTimeMillis();
-            // 防抖 500ms
-            if (now - lastClipTime < 500) return;
+            // 本地防抖 300ms
+            if (now - lastClipTime < 300) return;
 
             ClipData clip = clipboardManager.getPrimaryClip();
             if (clip == null || clip.getItemCount() == 0) return;

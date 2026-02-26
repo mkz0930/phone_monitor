@@ -8,11 +8,11 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
 /**
@@ -40,7 +40,7 @@ public class AddContentDialog extends DialogFragment {
         TextInputEditText etTags = view.findViewById(R.id.et_add_tags);
         ChipGroup chipType = view.findViewById(R.id.chip_group_type);
 
-        return new AlertDialog.Builder(requireContext())
+        return new MaterialAlertDialogBuilder(requireContext(), R.style.Theme_PhoneMonitor_Dialog)
                 .setTitle("✍️ 添加内容")
                 .setView(view)
                 .setPositiveButton("保存", (dialog, which) -> {

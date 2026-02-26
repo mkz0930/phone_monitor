@@ -3,7 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_auto_sync"
+        android:title="🔄 自动同步"
+        android:checkable="true"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_sync"
-        android:title="📤 同步到飞书"
+        android:title="📤 手动同步"
         app:showAsAction="ifRoom" />
 </menu>

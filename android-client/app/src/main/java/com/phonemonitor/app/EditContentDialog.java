@@ -8,11 +8,11 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
 /**
@@ -63,7 +63,7 @@ public class EditContentDialog extends DialogFragment {
             }
         }
 
-        return new AlertDialog.Builder(requireContext())
+        return new MaterialAlertDialogBuilder(requireContext(), R.style.Theme_PhoneMonitor_Dialog)
                 .setTitle("✏️ 编辑内容")
                 .setView(view)
                 .setPositiveButton("保存", (dialog, which) -> {

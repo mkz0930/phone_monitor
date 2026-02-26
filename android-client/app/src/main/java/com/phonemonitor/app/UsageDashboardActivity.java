@@ -15,7 +15,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.mikephil.charting.animation.Easing;
@@ -31,6 +30,7 @@ import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
 import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.text.SimpleDateFormat;
@@ -297,9 +297,12 @@ public class UsageDashboardActivity extends AppCompatActivity {
                             name, formatDuration(r.usageMs), pct));
                 }
 
-                new AlertDialog.Builder(this)
-                        .setTitle("各应用使用占比")
-                        .setMessage(sb.toString())
+                String title = "各应用使用占比";
+                String message = sb.toString();
+
+                new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
+                        .setTitle(title)
+                        .setMessage(message)
                         .setPositiveButton("确定", null)
                         .show();
             });
@@ -326,7 +329,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
                     sb.append(String.format("📅 %s: %s\n", shortDate, formatDuration(r.usageMs)));
                 }
 
-                new AlertDialog.Builder(this)
+                new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
                         .setTitle(appName + " 7天趋势")
                         .setMessage(sb.toString())
                         .setPositiveButton("确定", null)
@@ -363,7 +366,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
                 String title = tvSelectedDate.getText().toString() + " 详细数据";
                 String totalStr = "\n📊 总时长汇总: " + formatDuration(totalMs);
                 
-                new AlertDialog.Builder(this)
+                new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
                         .setTitle(title)
                         .setMessage(sb.toString() + totalStr)
                         .setPositiveButton("确定", null)
@@ -625,7 +628,7 @@ public class UsageDashboardActivity extends AppCompatActivity {
     }
 
     private void showPermissionDialog() {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
                 .setTitle("需要使用权限")
                 .setMessage("应用使用统计需要「使用情况访问权限」才能显示数据。\n\n" +
                         "请在设置中授予权限：\n" +
