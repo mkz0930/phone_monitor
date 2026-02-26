@@ -1,6 +1,7 @@
 package com.phonemonitor.app;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -171,6 +172,25 @@ public class AppDictionary {
     public static String getCategory(String packageName) {
         AppInfo info = lookup(packageName);
         return info != null ? info.category : "其他";
+    }
+
+    /**
+     * 获取所有已知分类（有序），key=分类名, value=emoji
+     */
+    public static Map<String, String> getAllCategories() {
+        LinkedHashMap<String, String> cats = new LinkedHashMap<>();
+        cats.put("社交", "💬");
+        cats.put("视频", "🎬");
+        cats.put("音乐", "🎵");
+        cats.put("工作", "💼");
+        cats.put("购物", "🛒");
+        cats.put("阅读", "📖");
+        cats.put("游戏", "🎮");
+        cats.put("工具", "🔧");
+        cats.put("出行", "🚗");
+        cats.put("系统", "⚙️");
+        cats.put("其他", "📦");
+        return cats;
     }
 
     /**

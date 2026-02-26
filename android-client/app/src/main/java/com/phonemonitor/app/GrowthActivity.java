@@ -2,6 +2,8 @@ package com.phonemonitor.app;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -9,6 +11,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,8 +19,13 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class GrowthActivity extends AppCompatActivity {
 
@@ -247,12 +255,142 @@ public class GrowthActivity extends AppCompatActivity {
     // PLACEHOLDER_DIALOGS
 
     private void showAddGoalDialog() {
-        String[] types = {"每日总屏幕时间", "社交类限制", "视频类限制", "游戏类限制"};
-        String[] typeKeys = {"total_screen_time", "category_limit:社交", "category_limit:视频", "category_limit:游戏"};
+        String[] types = {"⏱️ 每日总屏幕时间", "📂 分类限制", "📱 单个应用限制"};
 
         new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
                 .setTitle("选择目标类型")
-                .setItems(types, (dialog, which) -> showTargetInputDialog(typeKeys[which], types[which]))
+                .setItems(types, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            showTargetInputDialog("total_screen_time", "每日总屏幕时间");
+                            break;
+                        case 1:
+                            showCategoryPickerDialog();
+                            break;
+                        case 2:
+                            showAppPickerDialog();
+                            break;
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showCategoryPickerDialog() {
+        Map<String, String> cats = AppDictionary.getAllCategories();
+        String[] labels = new String[cats.size()];
+        String[] keys = new String[cats.size()];
+        int i = 0;
+        for (Map.Entry<String, String> e : cats.entrySet()) {
+            labels[i] = e.getValue() + " " + e.getKey();
+            keys[i] = "category_limit:" + e.getKey();
+            i++;
+        }
+
+        new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
+                .setTitle("选择分类")
+                .setItems(labels, (dialog, which) ->
+                        showTargetInputDialog(keys[which], labels[which] + "限制"))
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showAppPickerDialog() {
+        new Thread(() -> {
+            // Collect unique apps from last 7 days
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Calendar cal = Calendar.getInstance();
+            LinkedHashMap<String, String> appMap = new LinkedHashMap<>();
+            UsageStatsDb db = UsageStatsDb.getInstance(this);
+            for (int d = 0; d < 7; d++) {
+                String date = sdf.format(cal.getTime());
+                List<UsageStatsDb.AppUsageRecord> records = db.getDailyUsage(date);
+                for (UsageStatsDb.AppUsageRecord r : records) {
+                    if (!appMap.containsKey(r.packageName)) {
+                        AppDictionary.AppInfo info = AppDictionary.lookup(r.packageName);
+                        String label = info != null
+                                ? info.emoji + " " + info.name
+                                : "📦 " + r.appName;
+                        appMap.put(r.packageName, label);
+                    }
+                }
+                cal.add(Calendar.DAY_OF_YEAR, -1);
+            }
+            List<String> pkgs = new ArrayList<>(appMap.keySet());
+            List<String> labels = new ArrayList<>(appMap.values());
+            runOnUiThread(() -> showAppListDialog(pkgs, labels));
+        }).start();
+    }
+
+    private void showAppListDialog(List<String> allPkgs, List<String> allLabels) {
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), 0);
+
+        EditText search = new EditText(this);
+        search.setHint("🔍 搜索应用...");
+        search.setTextColor(COLOR_TEXT);
+        search.setHintTextColor(COLOR_TEXT_DIM);
+        search.setSingleLine(true);
+        search.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+        container.addView(search);
+
+        LinearLayout listLayout = new LinearLayout(this);
+        listLayout.setOrientation(LinearLayout.VERTICAL);
+        listLayout.setPadding(0, dpToPx(8), 0, 0);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(300)));
+        scrollView.addView(listLayout);
+        container.addView(scrollView);
+
+        // Dialog holder for dismiss from click listeners
+        final androidx.appcompat.app.AlertDialog[] dlgHolder = new androidx.appcompat.app.AlertDialog[1];
+
+        // Build initial list
+        Runnable[] refreshList = new Runnable[1];
+        refreshList[0] = () -> {
+            listLayout.removeAllViews();
+            String query = search.getText().toString().toLowerCase(Locale.getDefault());
+            for (int i = 0; i < allLabels.size(); i++) {
+                if (!query.isEmpty() && !allLabels.get(i).toLowerCase(Locale.getDefault()).contains(query)
+                        && !allPkgs.get(i).toLowerCase(Locale.getDefault()).contains(query)) {
+                    continue;
+                }
+                final int idx = i;
+                TextView tv = new TextView(this);
+                tv.setText(allLabels.get(i));
+                tv.setTextColor(COLOR_TEXT);
+                tv.setTextSize(14f);
+                tv.setPadding(dpToPx(8), dpToPx(10), dpToPx(8), dpToPx(10));
+                tv.setOnClickListener(v -> {
+                    if (dlgHolder[0] != null) dlgHolder[0].dismiss();
+                    showTargetInputDialog("app_limit:" + allPkgs.get(idx),
+                            allLabels.get(idx) + " 限制");
+                });
+                listLayout.addView(tv);
+            }
+            if (listLayout.getChildCount() == 0) {
+                TextView empty = new TextView(this);
+                empty.setText("无匹配应用");
+                empty.setTextColor(COLOR_TEXT_DIM);
+                empty.setTextSize(13f);
+                empty.setPadding(dpToPx(8), dpToPx(10), 0, 0);
+                listLayout.addView(empty);
+            }
+        };
+        refreshList[0].run();
+
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) { refreshList[0].run(); }
+        });
+
+        dlgHolder[0] = new MaterialAlertDialogBuilder(this, R.style.Theme_PhoneMonitor_Dialog)
+                .setTitle("选择应用")
+                .setView(container)
                 .setNegativeButton("取消", null)
                 .show();
     }
@@ -321,12 +459,16 @@ public class GrowthActivity extends AppCompatActivity {
     }
 
     private String formatGoalType(String goalType) {
-        if ("total_screen_time".equals(goalType)) return "每日屏幕时间";
-        if (goalType.startsWith("category_limit:")) return goalType.substring("category_limit:".length()) + "类限制";
+        if ("total_screen_time".equals(goalType)) return "⏱️ 每日屏幕时间";
+        if (goalType.startsWith("category_limit:")) {
+            String cat = goalType.substring("category_limit:".length());
+            return AppDictionary.getCategoryEmoji(cat) + " " + cat + "类限制";
+        }
         if (goalType.startsWith("app_limit:")) {
             String pkg = goalType.substring("app_limit:".length());
             AppDictionary.AppInfo info = AppDictionary.lookup(pkg);
-            return (info != null ? info.name : pkg) + "限制";
+            if (info != null) return info.emoji + " " + info.name + "限制";
+            return "📦 " + pkg + "限制";
         }
         return goalType;
     }
