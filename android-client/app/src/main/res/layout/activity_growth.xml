@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F0F1A">
+    android:background="@color/background_dark">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="20dp">
 
             <!-- Header -->
             <LinearLayout
@@ -24,37 +24,40 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp">
 
                 <ImageButton
                     android:id="@+id/btn_back"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:src="@drawable/ic_arrow_back"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Back"
-                    app:tint="#E0E0E0" />
+                    app:tint="@color/text_primary" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="成长建议"
-                    android:textSize="22sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
-                    android:textColor="#00FBFF"
+                    android:textColor="@color/cyan_accent"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
             <!-- Goal Progress Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_goal_progress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#1A1A2E"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="@color/surface_dark"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -67,29 +70,30 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="目标进度"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#E0E0E0"
-                        android:layout_marginBottom="12dp" />
+                        android:textColor="@color/text_primary"
+                        android:layout_marginBottom="16dp" />
 
                     <ProgressBar
                         android:id="@+id/progress_goal"
                         style="?android:attr/progressBarStyleHorizontal"
                         android:layout_width="match_parent"
-                        android:layout_height="20dp"
+                        android:layout_height="12dp"
                         android:max="100"
                         android:progress="0"
-                        android:progressTint="#00FBFF"
-                        android:progressBackgroundTint="#2A2A4A" />
+                        android:progressTint="@color/cyan_accent"
+                        android:progressBackgroundTint="@color/divider_color" />
 
                     <TextView
                         android:id="@+id/tv_goal_status"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="暂无目标"
-                        android:textSize="14sp"
-                        android:textColor="#9D7AFF"
-                        android:layout_marginTop="8dp" />
+                        android:textSize="15sp"
+                        android:textColor="@color/purple_accent"
+                        android:layout_marginTop="12dp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_goal_detail"
@@ -97,19 +101,21 @@
                         android:layout_height="wrap_content"
                         android:text=""
                         android:textSize="12sp"
-                        android:textColor="#888888"
+                        android:textColor="@color/text_dimmed"
                         android:layout_marginTop="4dp" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Today Analysis Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#1A1A2E"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="@color/surface_dark"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -121,19 +127,19 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="今日分析"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#E0E0E0"
-                        android:layout_marginBottom="4dp" />
+                        android:textColor="@color/text_primary"
+                        android:layout_marginBottom="8dp" />
 
                     <TextView
                         android:id="@+id/tv_today_summary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="加载中..."
-                        android:textSize="13sp"
-                        android:textColor="#888888"
-                        android:layout_marginBottom="12dp" />
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginBottom="16dp" />
 
                     <LinearLayout
                         android:id="@+id/layout_tips"
@@ -141,16 +147,18 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Trends Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#1A1A2E"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="@color/surface_dark"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -162,10 +170,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="分类趋势"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#E0E0E0"
-                        android:layout_marginBottom="12dp" />
+                        android:textColor="@color/text_primary"
+                        android:layout_marginBottom="16dp" />
 
                     <LinearLayout
                         android:id="@+id/layout_trends"
@@ -173,16 +181,17 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Set Goal Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#1A1A2E"
-                android:layout_marginBottom="12dp">
+                app:cardBackgroundColor="@color/surface_dark"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -194,10 +203,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="设置目标"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#E0E0E0"
-                        android:layout_marginBottom="12dp" />
+                        android:textColor="@color/text_primary"
+                        android:layout_marginBottom="16dp" />
 
                     <LinearLayout
                         android:id="@+id/layout_goals"
@@ -205,17 +214,18 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_add_goal"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
+                        android:layout_height="52dp"
                         android:text="+ 添加目标"
-                        android:backgroundTint="#9D7AFF"
-                        android:textColor="#FFFFFF"
-                        android:textSize="13sp"
-                        android:layout_marginTop="8dp" />
+                        android:backgroundTint="@color/purple_accent"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:layout_marginTop="12dp"
+                        app:cornerRadius="12dp" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>
@@ -226,6 +236,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:visibility="gone"
-        android:indeterminateTint="#00FBFF" />
+        android:indeterminateTint="@color/cyan_accent" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA">
+    android:background="@color/background_dark">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,23 +16,26 @@
             android:id="@+id/toolbar_knowledge"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/design_default_color_primary"
+            android:background="@color/background_dark"
             app:title="📚 知识库"
-            app:titleTextColor="@android:color/white"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="@android:color/white" />
+            app:titleTextColor="@color/text_primary"
+            app:navigationIconTint="@color/text_primary" />
 
         <!-- Search bar -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="12dp"
-            app:boxBackgroundMode="outline"
-            app:boxCornerRadiusTopStart="24dp"
-            app:boxCornerRadiusTopEnd="24dp"
-            app:boxCornerRadiusBottomStart="24dp"
-            app:boxCornerRadiusBottomEnd="24dp"
-            app:startIconDrawable="@android:drawable/ic_menu_search">
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            app:boxBackgroundColor="@color/surface_dark"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:startIconTint="@color/text_dimmed"
+            app:hintTextColor="@color/cyan_accent"
+            app:boxStrokeColor="@color/divider_color">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_search"
@@ -41,6 +44,7 @@
                 android:hint="搜索标题、内容、标签…"
                 android:inputType="text"
                 android:textSize="14sp"
+                android:textColor="@color/text_primary"
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -64,6 +68,9 @@
                     android:layout_height="wrap_content"
                     android:text="全部"
                     android:checked="true"
+                    app:chipBackgroundColor="@color/surface_dark"
+                    android:textColor="@color/text_secondary"
+                    app:chipStrokeWidth="0dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
 
                 <com.google.android.material.chip.Chip
@@ -71,6 +78,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="📝 笔记"
+                    app:chipBackgroundColor="@color/surface_dark"
+                    android:textColor="@color/text_secondary"
+                    app:chipStrokeWidth="0dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
 
                 <com.google.android.material.chip.Chip
@@ -78,6 +88,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="📰 文章"
+                    app:chipBackgroundColor="@color/surface_dark"
+                    android:textColor="@color/text_secondary"
+                    app:chipStrokeWidth="0dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
 
                 <com.google.android.material.chip.Chip
@@ -85,6 +98,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🔗 链接"
+                    app:chipBackgroundColor="@color/surface_dark"
+                    android:textColor="@color/text_secondary"
+                    app:chipStrokeWidth="0dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
 
                 <com.google.android.material.chip.Chip
@@ -92,6 +108,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="💻 代码"
+                    app:chipBackgroundColor="@color/surface_dark"
+                    android:textColor="@color/text_secondary"
+                    app:chipStrokeWidth="0dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
 
                 <com.google.android.material.chip.Chip
@@ -99,6 +118,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="⭐ 收藏"
+                    app:chipBackgroundColor="@color/surface_dark"
+                    android:textColor="@color/text_secondary"
+                    app:chipStrokeWidth="0dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
@@ -109,9 +131,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="16dp"
-            android:paddingVertical="6dp"
+            android:paddingVertical="8dp"
             android:textSize="12sp"
-            android:textColor="#999999" />
+            android:textColor="@color/text_dimmed" />
 
         <!-- Content list -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -129,7 +151,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:clipToPadding="false"
-                    android:paddingBottom="80dp" />
+                    android:paddingBottom="88dp" />
 
                 <!-- Empty state -->
                 <LinearLayout
@@ -144,22 +166,22 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="📚"
-                        android:textSize="48sp" />
+                        android:textSize="64sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="知识库为空"
                         android:textSize="16sp"
-                        android:textColor="#999999"
-                        android:layout_marginTop="8dp" />
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginTop="16dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="复制内容即可自动收集"
                         android:textSize="13sp"
-                        android:textColor="#BBBBBB"
+                        android:textColor="@color/text_dimmed"
                         android:layout_marginTop="4dp" />
                 </LinearLayout>
             </FrameLayout>
@@ -172,9 +194,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
+        android:layout_margin="20dp"
         android:src="@android:drawable/ic_input_add"
         android:contentDescription="添加内容"
-        app:backgroundTint="#2196F3" />
+        app:tint="@color/background_dark"
+        app:backgroundTint="@color/cyan_accent" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

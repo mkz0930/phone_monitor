@@ -3,41 +3,50 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:background="#FAFAFA">
+    android:background="@color/background_dark"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <!-- 标题 -->
-        <TextView
+        <!-- Header Section -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📱 手机监控"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#1A1A1A"
+            android:orientation="vertical"
             android:gravity="center"
-            android:layout_marginBottom="2dp" />
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="24dp">
 
-        <TextView
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📱 手机监控"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="使用统计 · 剪贴板 · 通知 → 飞书"
+                android:textSize="14sp"
+                android:textColor="@color/text_dimmed"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <!-- Status Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="使用统计 · 剪贴板 · 通知 → 飞书"
-            android:textSize="13sp"
-            android:textColor="#888888"
-            android:gravity="center"
-            android:layout_marginBottom="20dp" />
-
-        <!-- 状态卡片 -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="20dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -50,129 +59,152 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="检查中..."
-                    android:textSize="13sp"
-                    android:lineSpacingExtra="4dp" />
+                    android:textSize="14sp"
+                    android:textColor="@color/text_secondary"
+                    android:lineSpacingExtra="6dp" />
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_grant_permission"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="🔓 授权使用情况访问"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone" />
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cornerRadius="8dp"
+                    android:backgroundTint="@color/orange_accent" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 功能开关区 -->
-        <androidx.cardview.widget.CardView
+        <!-- Feature Switches Section -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="20dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="功能开关"
-                    android:textSize="15sp"
+                    android:text="功能管理"
+                    android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="8dp" />
+                    android:textColor="@color/cyan_accent"
+                    android:layout_marginBottom="12dp" />
 
-                <Button
+                <!-- We keep Button IDs but use SwitchMaterial -->
+                <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/btn_clipboard"
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="📋 开启无障碍监听"
-                    android:backgroundTint="#FF9800"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_height="wrap_content"
+                    android:text="📋 无障碍监听"
+                    android:paddingVertical="8dp"
+                    android:textColor="@color/text_primary" />
 
-                <Button
+                <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/btn_clip_service"
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="🔄 启动后台剪贴板服务"
-                    android:backgroundTint="#FF9800"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_height="wrap_content"
+                    android:text="🔄 后台剪贴板服务"
+                    android:paddingVertical="8dp"
+                    android:textColor="@color/text_primary" />
 
-                <Button
+                <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/btn_notification"
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="🔔 开启通知同步"
-                    android:backgroundTint="#FF9800"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_height="wrap_content"
+                    android:text="🔔 通知同步"
+                    android:paddingVertical="8dp"
+                    android:textColor="@color/text_primary" />
 
-                <Button
-                    android:id="@+id/btn_knowledge"
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="📚 知识库"
-                    android:backgroundTint="#2196F3"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_height="1dp"
+                    android:background="@color/divider_color"
+                    android:layout_marginVertical="12dp" />
 
-                <Button
-                    android:id="@+id/btn_dashboard"
+                <!-- Navigation Buttons -->
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="📊 使用统计"
-                    android:backgroundTint="#7C4DFF"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/btn_growth"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="📈 成长建议"
-                    android:backgroundTint="#9D7AFF"
-                    android:textSize="13sp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_knowledge"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📚 知识库"
+                        android:textColor="@color/cyan_accent" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_dashboard"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📊 统计"
+                        android:textColor="@color/purple_accent" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_growth"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📈 成长"
+                        android:textColor="@color/pink_accent" />
+                </LinearLayout>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 操作按钮 -->
+        <!-- Quick Actions -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="20dp">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_test"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="📊 预览"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                android:text="👁️ 预览日志"
+                android:layout_marginEnd="10dp"
+                app:cornerRadius="12dp"
+                android:textColor="@color/text_secondary"
+                app:strokeColor="@color/divider_color" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_send_now"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="56dp"
                 android:layout_weight="1"
-                android:text="📤 立即发送"
-                android:backgroundTint="#2196F3" />
+                android:text="📤 立即同步"
+                app:cornerRadius="12dp"
+                android:backgroundTint="@color/cyan_accent"
+                android:textColor="@color/background_dark"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Webhook 配置（可折叠） -->
-        <androidx.cardview.widget.CardView
+        <!-- Webhook Config Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="20dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -185,28 +217,27 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="⚙️ Webhook 配置 ▸"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
-                    android:textColor="#666666"
-                    android:padding="4dp" />
+                    android:textColor="@color/text_dimmed"
+                    android:padding="8dp" />
 
                 <LinearLayout
                     android:id="@+id/layout_webhook"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="gone"
+                    android:padding="4dp">
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:layout_marginBottom="8dp"
-                        app:boxBackgroundMode="outline"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp">
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxStrokeColor="@color/cyan_accent"
+                        app:hintTextColor="@color/cyan_accent">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_webhook_url"
@@ -214,103 +245,96 @@
                             android:layout_height="wrap_content"
                             android:hint="主 Webhook 地址"
                             android:inputType="textUri"
-                            android:textSize="12sp" />
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        app:boxBackgroundMode="outline"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp">
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_extra_webhooks"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="额外目标（Webhook URL 或 oc_ 群聊ID）"
+                            android:hint="额外目标 (Webhook URL / 群聊ID)"
                             android:inputType="textUri|textMultiLine"
-                            android:textSize="12sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        app:boxBackgroundMode="outline"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_app_id"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="飞书 App ID（oc_ 群聊需要）"
-                            android:inputType="text"
-                            android:textSize="12sp" />
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        app:boxBackgroundMode="outline"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_app_id"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="飞书 App ID"
+                            android:inputType="text"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         app:endIconMode="password_toggle">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_app_secret"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="飞书 App Secret（oc_ 群聊需要）"
+                            android:hint="飞书 App Secret"
                             android:inputType="textPassword"
-                            android:textSize="12sp" />
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        app:boxBackgroundMode="outline"
-                        app:boxCornerRadiusTopStart="8dp"
-                        app:boxCornerRadiusTopEnd="8dp"
-                        app:boxCornerRadiusBottomStart="8dp"
-                        app:boxCornerRadiusBottomEnd="8dp">
+                        android:layout_marginBottom="12dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_sync_chat_id"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="同步群聊 ID (feishu_sync_chat_id)"
+                            android:hint="同步群聊 ID"
                             android:inputType="text"
-                            android:textSize="12sp" />
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_save"
                         android:layout_width="match_parent"
-                        android:layout_height="40dp"
-                        android:text="💾 保存"
-                        android:backgroundTint="#4CAF50"
-                        android:textSize="13sp" />
+                        android:layout_height="48dp"
+                        android:text="💾 保存配置"
+                        android:backgroundTint="@color/status_green"
+                        android:textColor="@color/text_primary"
+                        app:cornerRadius="8dp" />
                 </LinearLayout>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 日志 -->
-        <androidx.cardview.widget.CardView
+        <!-- Log Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/log_background"
             app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            app:strokeColor="@color/divider_color"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -321,28 +345,30 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📝 日志"
-                    android:textSize="14sp"
+                    android:text="TERMINAL LOG"
+                    android:textSize="11sp"
                     android:textStyle="bold"
-                    android:textColor="#333333"
-                    android:layout_marginBottom="6dp" />
+                    android:textColor="@color/text_dimmed"
+                    android:layout_marginBottom="8dp"
+                    android:letterSpacing="0.1" />
 
                 <ScrollView
                     android:id="@+id/scroll_log"
                     android:layout_width="match_parent"
-                    android:layout_height="180dp">
+                    android:layout_height="220dp">
 
                     <TextView
                         android:id="@+id/tv_log"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="11sp"
+                        android:textSize="12sp"
                         android:fontFamily="monospace"
-                        android:textColor="#555555"
-                        android:text="就绪\n" />
+                        android:textColor="@color/log_info"
+                        android:text="[SYSTEM] READY\n"
+                        android:lineSpacingMultiplier="1.2" />
                 </ScrollView>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </ScrollView>

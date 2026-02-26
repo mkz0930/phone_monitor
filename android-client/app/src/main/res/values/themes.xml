@@ -1,44 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.PhoneMonitor" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">#2196F3</item>
-        <item name="colorPrimaryVariant">#1976D2</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">#4CAF50</item>
-        <item name="colorSecondaryVariant">#388E3C</item>
-        <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="android:statusBarColor">#1976D2</item>
-    </style>
-
-    <style name="Theme.PhoneMonitor.Dashboard" parent="Theme.MaterialComponents.NoActionBar">
-        <item name="colorPrimary">#00E5FF</item>
+    <!-- Base Theme - Dark by default -->
+    <style name="Theme.PhoneMonitor" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">@color/cyan_accent</item>
         <item name="colorPrimaryVariant">#00B8D4</item>
         <item name="colorOnPrimary">#000000</item>
-        <item name="colorSecondary">#7C4DFF</item>
+        <item name="colorSecondary">@color/purple_accent</item>
         <item name="colorSecondaryVariant">#651FFF</item>
         <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="colorSurface">#1A1A2E</item>
-        <item name="colorOnSurface">#E0E0E0</item>
-        <item name="android:colorBackground">#0F0F1A</item>
-        <item name="android:statusBarColor">#0F0F1A</item>
-        <item name="android:navigationBarColor">#0F0F1A</item>
+        <item name="colorSurface">@color/surface_dark</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/background_dark</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
+        <item name="android:navigationBarColor">@color/background_dark</item>
         <item name="android:windowLightStatusBar">false</item>
+        
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        
+        <!-- MD3 style components -->
+        <item name="materialCardViewStyle">@style/Widget.PhoneMonitor.CardView</item>
+        <item name="switchStyle">@style/Widget.PhoneMonitor.Switch</item>
+    </style>
+
+    <!-- Legacy style naming kept for backward compatibility if needed -->
+    <style name="Theme.PhoneMonitor.Dashboard" parent="Theme.PhoneMonitor">
     </style>
 
     <style name="Theme.PhoneMonitor.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
-        <item name="android:background">#1A1A2E</item>
         <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:textColorPrimary">#E0E0E0</item>
-        <item name="android:textColorSecondary">#888888</item>
-        <item name="colorSurface">#1A1A2E</item>
-        <item name="colorOnSurface">#E0E0E0</item>
-        <item name="colorPrimary">#00E5FF</item>
-        <item name="colorSecondary">#7C4DFF</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="colorSurface">@color/surface_dark</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorPrimary">@color/cyan_accent</item>
+        <item name="colorSecondary">@color/purple_accent</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.PhoneMonitor.MediumComponent</item>
+    </style>
+
+    <style name="Widget.PhoneMonitor.CardView" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="cardBackgroundColor">@color/surface_dark</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="Widget.PhoneMonitor.Switch" parent="Widget.MaterialComponents.CompoundButton.Switch">
+        <item name="useMaterialThemeColors">true</item>
     </style>
 
     <style name="ShapeAppearance.PhoneMonitor.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="TextAppearance.PhoneMonitor.Header" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.PhoneMonitor.Body" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="TextAppearance.PhoneMonitor.Log" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textColor">@color/log_info</item>
     </style>
 </resources>

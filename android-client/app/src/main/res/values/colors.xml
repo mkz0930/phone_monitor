@@ -1,5 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#2196F3</color>
-    <color name="ic_launcher_foreground">#FFFFFF</color>
+    <!-- Basic Palette -->
+    <color name="ic_launcher_background">#0F0F1A</color>
+    <color name="ic_launcher_foreground">#00E5FF</color>
+
+    <!-- Dark Theme Palette -->
+    <color name="background_dark">#0F0F1A</color>
+    <color name="surface_dark">#1A1A2E</color>
+    <color name="surface_dark_elevated">#252545</color>
+    
+    <!-- Accents -->
+    <color name="cyan_accent">#00E5FF</color>
+    <color name="purple_accent">#7C4DFF</color>
+    <color name="pink_accent">#FF4081</color>
+    <color name="orange_accent">#FF9100</color>
+    
+    <!-- Status Colors -->
+    <color name="status_green">#4CAF50</color>
+    <color name="status_red">#F44336</color>
+    <color name="status_yellow">#FFC107</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0C0</color>
+    <color name="text_dimmed">#606080</color>
+    
+    <!-- Log Colors -->
+    <color name="log_debug">#BBBBBB</color>
+    <color name="log_info">#00E5FF</color>
+    <color name="log_warn">#FFC107</color>
+    <color name="log_error">#F44336</color>
+    <color name="log_background">#05050A</color>
+
+    <!-- Overlay/Divider -->
+    <color name="divider_color">#2A2A4A</color>
+    <color name="tint_overlay">#2200E5FF</color>
 </resources>

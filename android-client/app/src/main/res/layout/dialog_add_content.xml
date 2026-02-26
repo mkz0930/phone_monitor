@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:background="@color/surface_dark"
     android:padding="20dp">
 
     <!-- Type chips -->
@@ -11,7 +12,7 @@
         android:id="@+id/chip_group_type"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="16dp"
         app:singleSelection="true"
         app:selectionRequired="true">
 
@@ -21,6 +22,9 @@
             android:layout_height="wrap_content"
             android:text="📝 笔记"
             android:checked="true"
+            app:chipBackgroundColor="@color/background_dark"
+            android:textColor="@color/text_secondary"
+            app:chipStrokeWidth="0dp"
             style="@style/Widget.MaterialComponents.Chip.Choice" />
 
         <com.google.android.material.chip.Chip
@@ -28,6 +32,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="📰 文章"
+            app:chipBackgroundColor="@color/background_dark"
+            android:textColor="@color/text_secondary"
+            app:chipStrokeWidth="0dp"
             style="@style/Widget.MaterialComponents.Chip.Choice" />
 
         <com.google.android.material.chip.Chip
@@ -35,6 +42,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🔗 链接"
+            app:chipBackgroundColor="@color/background_dark"
+            android:textColor="@color/text_secondary"
+            app:chipStrokeWidth="0dp"
             style="@style/Widget.MaterialComponents.Chip.Choice" />
 
         <com.google.android.material.chip.Chip
@@ -42,6 +52,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="💻 代码"
+            app:chipBackgroundColor="@color/background_dark"
+            android:textColor="@color/text_secondary"
+            app:chipStrokeWidth="0dp"
             style="@style/Widget.MaterialComponents.Chip.Choice" />
 
         <com.google.android.material.chip.Chip
@@ -49,6 +62,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="📎 其他"
+            app:chipBackgroundColor="@color/background_dark"
+            android:textColor="@color/text_secondary"
+            app:chipStrokeWidth="0dp"
             style="@style/Widget.MaterialComponents.Chip.Choice" />
     </com.google.android.material.chip.ChipGroup>
 
@@ -56,12 +72,10 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        app:boxBackgroundMode="outline"
-        app:boxCornerRadiusTopStart="8dp"
-        app:boxCornerRadiusTopEnd="8dp"
-        app:boxCornerRadiusBottomStart="8dp"
-        app:boxCornerRadiusBottomEnd="8dp">
+        android:layout_marginBottom="12dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:hintTextColor="@color/cyan_accent"
+        app:boxStrokeColor="@color/divider_color">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_add_title"
@@ -69,6 +83,7 @@
             android:layout_height="wrap_content"
             android:hint="标题（可选，自动生成）"
             android:inputType="text"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -76,12 +91,10 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        app:boxBackgroundMode="outline"
-        app:boxCornerRadiusTopStart="8dp"
-        app:boxCornerRadiusTopEnd="8dp"
-        app:boxCornerRadiusBottomStart="8dp"
-        app:boxCornerRadiusBottomEnd="8dp">
+        android:layout_marginBottom="12dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:hintTextColor="@color/cyan_accent"
+        app:boxStrokeColor="@color/divider_color">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_add_content"
@@ -91,6 +104,7 @@
             android:inputType="textMultiLine"
             android:minLines="4"
             android:gravity="top"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -98,11 +112,9 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:boxBackgroundMode="outline"
-        app:boxCornerRadiusTopStart="8dp"
-        app:boxCornerRadiusTopEnd="8dp"
-        app:boxCornerRadiusBottomStart="8dp"
-        app:boxCornerRadiusBottomEnd="8dp">
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:hintTextColor="@color/cyan_accent"
+        app:boxStrokeColor="@color/divider_color">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_add_tags"
@@ -110,6 +122,7 @@
             android:layout_height="wrap_content"
             android:hint="标签（逗号分隔，可选）"
             android:inputType="text"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 

@@ -36,11 +36,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
+import com.google.android.material.switchmaterial.SwitchMaterial;
+
 public class MainActivity extends AppCompatActivity implements LogBus.LogListener {
     static final String PREFS_NAME = "phone_monitor_prefs";
 
     private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret, etSyncChatId;
-    private Button btnSave, btnTest, btnGrant, btnSendNow, btnClipboard, btnClipService, btnNotification, btnKnowledge, btnDashboard, btnGrowth;
+    private Button btnSave, btnTest, btnGrant, btnSendNow, btnKnowledge, btnDashboard, btnGrowth;
+    private SwitchMaterial btnClipboard, btnClipService, btnNotification;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
     private ScrollView scrollLog;
@@ -349,41 +352,22 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnGrant.setVisibility(hasPerm ? View.GONE : View.VISIBLE);
 
         // 剪贴板按钮
-        if (clipEnabled) {
-            btnClipboard.setText("✅ 无障碍监听中");
-            btnClipboard.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFF4CAF50));
-        } else {
-            btnClipboard.setText("📋 开启无障碍监听");
-            btnClipboard.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFFFF9800));
-        }
+        btnClipboard.setChecked(clipEnabled);
+        btnClipboard.setText(clipEnabled ? "✅ 无障碍监听中" : "📋 开启无障碍监听");
 
         // 前台剪贴板服务按钮
         boolean clipSvcRunning2 = ClipboardForegroundService.isServiceRunning();
-        if (clipSvcRunning2) {
-            btnClipService.setText("✅ 后台剪贴板运行中");
-            btnClipService.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFF4CAF50));
-        } else {
-            btnClipService.setText("🔄 启动后台剪贴板服务");
-            btnClipService.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFFFF9800));
-        }
+        btnClipService.setChecked(clipSvcRunning2);
+        btnClipService.setText(clipSvcRunning2 ? "✅ 后台剪贴板运行中" : "🔄 启动后台剪贴板服务");
 
         // 通知按钮
+        btnNotification.setChecked(notifEnabled);
         if (notifEnabled) {
             btnNotification.setText("✅ 通知同步中（点击暂停）");
-            btnNotification.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFF4CAF50));
         } else if (notifPermission) {
             btnNotification.setText("⏸ 通知同步已暂停（点击开启）");
-            btnNotification.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFF9E9E9E));
         } else {
             btnNotification.setText("🔔 开启通知同步");
-            btnNotification.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(0xFFFF9800));
         }
 
         // 知识库按钮
