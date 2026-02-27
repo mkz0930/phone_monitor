@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
 
     private EditText etWebhookUrl, etExtraWebhooks, etAppId, etAppSecret, etSyncChatId;
     private Button btnSave, btnTest, btnGrant, btnSendNow, btnKnowledge, btnDashboard, btnGrowth, btnCheckUpdate;
-    private SwitchMaterial btnClipboard, btnClipService, btnNotification;
+    private SwitchMaterial btnClipboard, btnClipService, btnNotification, btnEntertainmentAlert;
     private TextView tvStatus, tvLog, tvWebhookHeader;
     private LinearLayout layoutWebhook;
     private ScrollView scrollLog;
@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         btnClipboard = findViewById(R.id.btn_clipboard);
         btnClipService = findViewById(R.id.btn_clip_service);
         btnNotification = findViewById(R.id.btn_notification);
+        btnEntertainmentAlert = findViewById(R.id.btn_entertainment_alert);
         btnKnowledge = findViewById(R.id.btn_knowledge);
         btnDashboard = findViewById(R.id.btn_dashboard);
         btnGrowth = findViewById(R.id.btn_growth);
@@ -84,6 +85,12 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         // 始终调度定时任务
         DailyAlarmReceiver.scheduleDailyReport(this);
         DailyAlarmReceiver.scheduleStatsCollection(this);
+
+        // 调度娱乐提醒（如果启用）
+        SharedPreferences alertPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (alertPrefs.getBoolean("entertainment_alert_enabled", true)) {
+            EntertainmentAlertReceiver.scheduleNextCheck(this);
+        }
 
         // 如果是首次运行或数据库为空，尝试采集最近 7 天数据
         new Thread(() -> {
@@ -214,6 +221,22 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
             updateStatus();
         });
 
+        btnEntertainmentAlert.setOnClickListener(v -> {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean current = prefs.getBoolean("entertainment_alert_enabled", true);
+            boolean newVal = !current;
+            prefs.edit().putBoolean("entertainment_alert_enabled", newVal).apply();
+            if (newVal) {
+                EntertainmentAlertReceiver.scheduleNextCheck(this);
+                appendLog("🎮 娱乐提醒已开启 (阈值: " +
+                        prefs.getInt("entertainment_alert_threshold_min", 30) + "分钟/小时)");
+            } else {
+                EntertainmentAlertReceiver.cancelCheck(this);
+                appendLog("🎮 娱乐提醒已关闭");
+            }
+            updateStatus();
+        });
+
         btnKnowledge.setOnClickListener(v -> {
             startActivity(new Intent(this, KnowledgeActivity.class));
         });
@@ -335,6 +358,13 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         }
         sb.append("\n");
 
+        // 娱乐提醒
+        boolean entertainmentEnabled = prefs.getBoolean("entertainment_alert_enabled", true);
+        int threshold = prefs.getInt("entertainment_alert_threshold_min", 30);
+        sb.append(entertainmentEnabled ? "✅" : "⏸").append(" 娱乐提醒");
+        if (entertainmentEnabled) sb.append(" · ").append(threshold).append("分钟/小时");
+        sb.append("\n");
+
         // 下次日报
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
         cal.set(Calendar.HOUR_OF_DAY, 19);
@@ -378,6 +408,14 @@ public class MainActivity extends AppCompatActivity implements LogBus.LogListene
         } else {
             btnNotification.setText("🔔 开启通知同步");
         }
+
+        // 娱乐提醒按钮
+        boolean entAlertOn = prefs.getBoolean("entertainment_alert_enabled", true);
+        int entThreshold = prefs.getInt("entertainment_alert_threshold_min", 30);
+        btnEntertainmentAlert.setChecked(entAlertOn);
+        btnEntertainmentAlert.setText(entAlertOn
+                ? "🎮 娱乐提醒 (" + entThreshold + "分钟/小时)"
+                : "🎮 娱乐提醒已关闭");
 
         // 知识库按钮
         try {

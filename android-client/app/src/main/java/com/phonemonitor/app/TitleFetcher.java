@@ -17,6 +17,9 @@ import java.util.regex.Pattern;
 public class TitleFetcher {
     private static final String TAG = "TitleFetcher";
     private static final Pattern TITLE_PATTERN = Pattern.compile("<title[^>]*>([^<]+)</title>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern OG_DESC_PATTERN = Pattern.compile("<meta[^>]+property=[\"']og:description[\"'][^>]+content=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern META_DESC_PATTERN = Pattern.compile("<meta[^>]+name=[\"']description[\"'][^>]+content=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern P_PATTERN = Pattern.compile("<p[^>]*>(.*?)</p>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final int TIMEOUT_MS = 5000;
     private static final int MAX_READ_BYTES = 50000; // 只读前 50KB
 
@@ -42,6 +45,139 @@ public class TitleFetcher {
                 new Handler(Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
             }
         }).start();
+    }
+
+    /**
+     * 标题 + 摘要结果
+     */
+    public static class TitleAndSummary {
+        public final String title;
+        public final String summary;
+
+        public TitleAndSummary(String title, String summary) {
+            this.title = title;
+            this.summary = summary;
+        }
+    }
+
+    public interface SummaryCallback {
+        void onSuccess(TitleAndSummary result);
+        void onError(String error);
+    }
+
+    /**
+     * 异步获取 URL 的标题和摘要
+     */
+    public static void fetchWithSummary(String url, SummaryCallback callback) {
+        new Thread(() -> {
+            try {
+                TitleAndSummary result = fetchSyncWithSummary(url);
+                new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(result));
+            } catch (Exception e) {
+                Log.e(TAG, "获取摘要失败: " + url, e);
+                new Handler(Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
+            }
+        }).start();
+    }
+
+    /**
+     * 同步获取标题和摘要（在后台线程调用）
+     */
+    public static TitleAndSummary fetchSyncWithSummary(String urlStr) throws Exception {
+        String html = fetchHtml(urlStr);
+
+        // 解析标题
+        String title = null;
+        Matcher titleMatcher = TITLE_PATTERN.matcher(html);
+        if (titleMatcher.find()) {
+            title = titleMatcher.group(1).trim();
+            title = title.replaceAll("\\s*[-_|]\\s*(抖音|知乎|微博|bilibili|B站|YouTube).*$", "");
+            if (title.length() > 100) {
+                title = title.substring(0, 100) + "…";
+            }
+        }
+
+        // 解析摘要: og:description → meta description → first <p>
+        String summary = null;
+
+        // 1. og:description
+        Matcher ogMatcher = OG_DESC_PATTERN.matcher(html);
+        if (ogMatcher.find()) {
+            summary = ogMatcher.group(1);
+        }
+
+        // 2. meta description
+        if (summary == null || summary.trim().isEmpty()) {
+            Matcher metaMatcher = META_DESC_PATTERN.matcher(html);
+            if (metaMatcher.find()) {
+                summary = metaMatcher.group(1);
+            }
+        }
+
+        // 3. first non-empty <p>
+        if (summary == null || summary.trim().isEmpty()) {
+            Matcher pMatcher = P_PATTERN.matcher(html);
+            while (pMatcher.find()) {
+                String pText = pMatcher.group(1).replaceAll("<[^>]+>", "").trim();
+                if (!pText.isEmpty()) {
+                    summary = pText;
+                    break;
+                }
+            }
+        }
+
+        // 清理和截断摘要
+        if (summary != null) {
+            summary = summary.replaceAll("<[^>]+>", "").trim();
+            summary = summary.replaceAll("&amp;", "&")
+                    .replaceAll("&lt;", "<")
+                    .replaceAll("&gt;", ">")
+                    .replaceAll("&quot;", "\"")
+                    .replaceAll("&#39;", "'")
+                    .replaceAll("&nbsp;", " ");
+            if (summary.length() > 200) {
+                summary = summary.substring(0, 200) + "…";
+            }
+            if (summary.isEmpty()) {
+                summary = null;
+            }
+        }
+
+        return new TitleAndSummary(title, summary);
+    }
+
+    /**
+     * 获取 HTML 内容（在后台线程调用）
+     */
+    private static String fetchHtml(String urlStr) throws Exception {
+        if (urlStr.contains("v.douyin.com")) {
+            urlStr = followRedirect(urlStr);
+        }
+
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(TIMEOUT_MS);
+        conn.setReadTimeout(TIMEOUT_MS);
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36");
+        conn.setInstanceFollowRedirects(true);
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode != 200) {
+            throw new Exception("HTTP " + responseCode);
+        }
+
+        StringBuilder html = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+            char[] buffer = new char[1024];
+            int read;
+            int totalRead = 0;
+            while ((read = reader.read(buffer)) != -1 && totalRead < MAX_READ_BYTES) {
+                html.append(buffer, 0, read);
+                totalRead += read;
+            }
+        }
+        return html.toString();
     }
 
     /**

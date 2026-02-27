@@ -21,9 +21,16 @@ public class BootReceiver extends BroadcastReceiver {
             DailyAlarmReceiver.scheduleDailyReport(context);
             DailyAlarmReceiver.scheduleStatsCollection(context);
 
-            // 如果用户之前开启了前台剪贴板服务，自动启动
             SharedPreferences prefs = context.getSharedPreferences("phone_monitor_prefs",
                     Context.MODE_PRIVATE);
+
+            // 调度娱乐提醒（如果启用）
+            if (prefs.getBoolean("entertainment_alert_enabled", true)) {
+                Log.i("BootReceiver", "🎮 调度娱乐提醒");
+                EntertainmentAlertReceiver.scheduleNextCheck(context);
+            }
+
+            // 如果用户之前开启了前台剪贴板服务，自动启动
             boolean clipServiceEnabled = prefs.getBoolean("clipboard_service_enabled", false);
             if (clipServiceEnabled) {
                 Log.i("BootReceiver", "🔄 自动启动前台剪贴板服务");

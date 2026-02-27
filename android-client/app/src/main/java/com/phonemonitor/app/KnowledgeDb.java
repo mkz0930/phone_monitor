@@ -180,6 +180,27 @@ public class KnowledgeDb extends SQLiteOpenHelper {
     }
 
     /**
+     * 更新标题和摘要
+     */
+    public boolean updateTitleAndSummary(long id, String title, String summary) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("title", title);
+        cv.put("summary", summary);
+        cv.put("updated_at", now());
+        return db.update("contents", cv, "id = ?", new String[]{String.valueOf(id)}) > 0;
+    }
+
+    /**
+     * 获取有 URL 但没有摘要的内容
+     */
+    public List<ContentItem> getUrlItemsWithoutSummary() {
+        return queryContents(
+                "SELECT * FROM contents WHERE url IS NOT NULL AND url != '' AND (summary IS NULL OR summary = '') ORDER BY created_at DESC",
+                null);
+    }
+
+    /**
      * 删除内容
      */
     public boolean deleteContent(long id) {

@@ -72,6 +72,9 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
             if (id == R.id.action_sync) {
                 syncToFeishu();
                 return true;
+            } else if (id == R.id.action_analyze_urls) {
+                analyzeUrlItems();
+                return true;
             } else if (id == R.id.action_auto_sync) {
                 boolean newState = !item.isChecked();
                 item.setChecked(newState);
@@ -281,6 +284,38 @@ public class KnowledgeActivity extends AppCompatActivity implements ContentAdapt
         db.toggleFavorite(item.id);
         item.isFavorite = !item.isFavorite;
         adapter.notifyItemChanged(position);
+    }
+
+    // ==================== URL Analysis ====================
+
+    private void analyzeUrlItems() {
+        List<ContentItem> urlItems = db.getUrlItemsWithoutSummary();
+        if (urlItems.isEmpty()) {
+            Toast.makeText(this, "没有需要分析的网址", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "正在分析 " + urlItems.size() + " 个网址...", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            int success = 0;
+            for (ContentItem item : urlItems) {
+                try {
+                    TitleFetcher.TitleAndSummary result = TitleFetcher.fetchSyncWithSummary(item.url);
+                    String title = result.title != null ? result.title : item.title;
+                    db.updateTitleAndSummary(item.id, title, result.summary);
+                    success++;
+                } catch (Exception e) {
+                    Log.e("KnowledgeActivity", "分析失败: " + item.url, e);
+                }
+            }
+
+            final int s = success;
+            runOnUiThread(() -> {
+                Toast.makeText(this, "✅ 分析完成，成功 " + s + "/" + urlItems.size(), Toast.LENGTH_SHORT).show();
+                loadContents();
+            });
+        }).start();
     }
 
     // ==================== Feishu Sync ====================

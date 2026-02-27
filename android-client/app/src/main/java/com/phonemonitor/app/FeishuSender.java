@@ -124,6 +124,11 @@ public class FeishuSender {
                     catEmoji, entry.getKey(), MainActivity.formatMs(entry.getValue())));
         }
 
+        // 每小时时间线
+        sb.append("\n━━━━━━━━━━━━━━━━━━\n");
+        sb.append("🕐 每小时明细：\n");
+        buildHourlyTimeline(sb, usm, startTime);
+
         // 总计
         long totalHours = totalMs / 3600000;
         sb.append("\n⏱ 总计: ").append(MainActivity.formatMs(totalMs));
@@ -145,6 +150,45 @@ public class FeishuSender {
         sb.append("\n📱 ").append(DeviceNames.get());
 
         return sb.toString();
+    }
+
+    /**
+     * 构建每小时使用明细时间线
+     */
+    private void buildHourlyTimeline(StringBuilder sb, UsageStatsManager usm, long dayStart) {
+        Map<Integer, Map<String, Long>> hourly =
+                EntertainmentAlertReceiver.queryDailyHourlyBreakdown(usm, dayStart);
+
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));
+        int currentHour = cal.get(Calendar.HOUR_OF_DAY);
+
+        for (int h = 0; h <= currentHour; h++) {
+            Map<String, Long> apps = hourly.get(h);
+            if (apps == null || apps.isEmpty()) continue;
+
+            // Sort by usage desc
+            List<Map.Entry<String, Long>> sorted = new ArrayList<>(apps.entrySet());
+            sorted.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+
+            // Only show hours with >1min total usage
+            long hourTotal = 0;
+            for (Map.Entry<String, Long> e : sorted) hourTotal += e.getValue();
+            if (hourTotal < 60000) continue;
+
+            sb.append(String.format("  %02d:00-%02d:00: ", h, h + 1));
+            int shown = 0;
+            for (Map.Entry<String, Long> entry : sorted) {
+                long min = entry.getValue() / 60000;
+                if (min < 1) continue;
+                if (shown > 0) sb.append(", ");
+                AppDictionary.AppInfo info = AppDictionary.lookup(entry.getKey());
+                String name = info != null ? info.name : entry.getKey();
+                sb.append(name).append(" ").append(min).append("min");
+                shown++;
+                if (shown >= 3) break; // Top 3 per hour
+            }
+            sb.append("\n");
+        }
     }
 
     /**

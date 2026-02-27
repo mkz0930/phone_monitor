@@ -3,6 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_analyze_urls"
+        android:title="🔍 分析网址"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_auto_sync"
         android:title="🔄 自动同步"
         android:checkable="true"

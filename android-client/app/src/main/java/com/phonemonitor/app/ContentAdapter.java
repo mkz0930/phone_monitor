@@ -13,7 +13,9 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 知识库内容列表适配器
@@ -27,6 +29,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
     }
 
     private List<ContentItem> items = new ArrayList<>();
+    private final Set<Long> fetchingIds = new HashSet<>();
     private OnItemClickListener listener;
 
     public ContentAdapter(OnItemClickListener listener) {
@@ -71,16 +74,22 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
                 ? item.title : item.getPreview(40);
         holder.tvTitle.setText(item.getTypeEmoji() + " " + title);
 
-        // 如果是链接且标题为空或是 URL，尝试异步获取标题
-        if (TitleFetcher.shouldFetchTitle(item.url) && 
-            (item.title == null || item.title.isEmpty() || item.title.startsWith("http"))) {
+        // 如果是链接且标题为空或是 URL，尝试异步获取标题（仅在未缓存且未请求中时）
+        boolean needsFetch = TitleFetcher.shouldFetchTitle(item.url)
+                && (item.title == null || item.title.isEmpty() || item.title.startsWith("http"))
+                && !fetchingIds.contains(item.id);
+        if (needsFetch) {
+            fetchingIds.add(item.id);
             holder.tvTitle.setText(item.getTypeEmoji() + " 加载中…");
             TitleFetcher.fetch(item.url, new TitleFetcher.Callback() {
                 @Override
                 public void onSuccess(String fetchedTitle) {
                     item.title = fetchedTitle;
-                    holder.tvTitle.setText(item.getTypeEmoji() + " " + fetchedTitle);
-                    // 更新数据库
+                    fetchingIds.remove(item.id);
+                    int pos = holder.getAdapterPosition();
+                    if (pos != RecyclerView.NO_POSITION) {
+                        notifyItemChanged(pos);
+                    }
                     new Thread(() -> {
                         android.content.Context ctx = holder.itemView.getContext();
                         KnowledgeDb.getInstance(ctx).updateTitle(item.id, fetchedTitle);
@@ -89,8 +98,8 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
 
                 @Override
                 public void onError(String error) {
-                    // 失败时显示 URL 或预览
-                    String fallback = item.url != null && !item.url.isEmpty() 
+                    fetchingIds.remove(item.id);
+                    String fallback = item.url != null && !item.url.isEmpty()
                             ? item.url : item.getPreview(40);
                     holder.tvTitle.setText(item.getTypeEmoji() + " " + fallback);
                 }
@@ -101,6 +110,14 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
         holder.tvPreview.setText(item.getPreview(100));
         holder.tvPreview.setVisibility(
                 item.content != null && !item.content.isEmpty() ? View.VISIBLE : View.GONE);
+
+        // Summary
+        if (item.summary != null && !item.summary.isEmpty()) {
+            holder.tvSummary.setText("📄 " + item.summary);
+            holder.tvSummary.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvSummary.setVisibility(View.GONE);
+        }
 
         // Time + source + ID
         holder.tvMeta.setText("#" + item.id + " · " + item.getRelativeTime() + 
@@ -147,7 +164,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvPreview, tvMeta;
+        TextView tvTitle, tvPreview, tvSummary, tvMeta;
         ImageView ivFavorite;
         ChipGroup chipGroupTags;
 
@@ -155,6 +172,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentAdapter.ViewHold
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tv_item_title);
             tvPreview = itemView.findViewById(R.id.tv_item_preview);
+            tvSummary = itemView.findViewById(R.id.tv_item_summary);
             tvMeta = itemView.findViewById(R.id.tv_item_meta);
             ivFavorite = itemView.findViewById(R.id.iv_item_favorite);
             chipGroupTags = itemView.findViewById(R.id.chip_group_tags);

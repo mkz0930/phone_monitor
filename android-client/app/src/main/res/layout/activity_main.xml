@@ -124,6 +124,14 @@
                     android:paddingVertical="8dp"
                     android:textColor="@color/text_primary" />
 
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/btn_entertainment_alert"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🎮 娱乐提醒 (30分钟/小时)"
+                    android:paddingVertical="8dp"
+                    android:textColor="@color/text_primary" />
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
